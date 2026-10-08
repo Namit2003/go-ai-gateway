@@ -9,7 +9,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
+
+var upstreamClient = func() *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.ResponseHeaderTimeout = 60 * time.Second
+	return &http.Client{Transport: t}
+}()
 
 type OpenAI struct {
 	APIKey  string
@@ -31,7 +38,7 @@ func (o OpenAI) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (
 	httpReq.Header.Set("Authorization", "Bearer "+o.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := upstreamClient.Do(httpReq)
 	if err != nil {
 		return out, fmt.Errorf("calling openai: %w", err)
 	}
@@ -58,7 +65,7 @@ func (o OpenAI) ChatCompletionStream(ctx context.Context, req ChatCompletionRequ
 	httpReq.Header.Set("Authorization", "Bearer "+o.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := upstreamClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("calling openai: %w", err)
 	}

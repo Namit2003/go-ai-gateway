@@ -146,3 +146,22 @@ func TestOpenAIChatCompletionStream(t *testing.T) {
 		t.Errorf("finish_reason = %v, want %q", finishReason, "stop")
 	}
 }
+
+func TestOpenAIChatCompletionHeaderTimeout(t *testing.T) {
+	old := upstreamClient
+	t.Cleanup(func() { upstreamClient = old })
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 50 * time.Millisecond
+	upstreamClient = &http.Client{Transport: transport}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+	}))
+	defer srv.Close()
+
+	p := OpenAI{BaseURL: srv.URL}
+	_, err := p.ChatCompletion(context.Background(), ChatCompletionRequest{Model: "m"})
+	if err == nil {
+		t.Fatal("expected a timeout error, got nil")
+	}
+}
