@@ -30,12 +30,12 @@ func (o OpenAI) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (
 
 	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("calling openai: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return out, fmt.Errorf("openai: unexpected status %d", resp.StatusCode)
+		return out, &UpstreamError{StatusCode: resp.StatusCode}
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&out)

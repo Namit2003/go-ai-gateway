@@ -5,9 +5,9 @@
 - [x] HTTP server
 - [x] configuration
 - [x] OpenAI-compatible request structs
-- [ ] provider interface
-- [ ] OpenAI provider
-- [ ] basic error handling
+- [x] provider interface
+- [x] OpenAI provider
+- [x] basic error handling
 - [ ] unit tests
 
 ## Phase 2 — Streaming
