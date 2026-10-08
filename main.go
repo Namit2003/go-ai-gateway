@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func chatCompletionsHandler(provider Provider) http.HandlerFunc {
@@ -87,5 +92,22 @@ func main() {
 
 	mux.HandleFunc("POST /v1/chat/completions", chatCompletionsHandler(provider))
 
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown failed: %v", err)
+	}
 }
