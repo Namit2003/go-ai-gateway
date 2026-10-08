@@ -42,7 +42,11 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 					return
 				}
 				if err != nil {
-					log.Printf("stream failed: %v", err)
+					if r.Context().Err() != nil {
+						log.Printf("client disconnected")
+					} else {
+						log.Printf("stream failed: %v", err)
+					}
 					return
 				}
 				data, _ := json.Marshal(chunk)

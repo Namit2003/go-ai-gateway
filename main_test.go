@@ -4,24 +4,31 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
 
 type fakeProvider struct {
-	resp   ChatCompletionResponse
-	chunks []ChatCompletionChunk
-	err    error
+	resp      ChatCompletionResponse
+	chunks    []ChatCompletionChunk
+	streamErr error
+	err       error
 }
 
 type fakeStream struct {
 	chunks []ChatCompletionChunk
+	err    error
 }
 
 func (s *fakeStream) Recv() (ChatCompletionChunk, error) {
 	if len(s.chunks) == 0 {
+		if s.err != nil {
+			return ChatCompletionChunk{}, s.err
+		}
 		return ChatCompletionChunk{}, io.EOF
 	}
 	chunk := s.chunks[0]
@@ -39,7 +46,7 @@ func (f fakeProvider) ChatCompletionStream(ctx context.Context, req ChatCompleti
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &fakeStream{chunks: f.chunks}, nil
+	return &fakeStream{chunks: f.chunks, err: f.streamErr}, nil
 }
 
 func TestChatCompletionsHandler(t *testing.T) {
@@ -98,5 +105,48 @@ func TestChatCompletionsHandlerStream(t *testing.T) {
 	}
 	if rec.Body.String() != events {
 		t.Errorf("body = %q, want %q", rec.Body.String(), events)
+	}
+}
+
+func TestChatCompletionsHandlerStreamError(t *testing.T) {
+	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`
+
+	tests := []struct {
+		name         string
+		cancelled    bool
+		wantLog      string
+		wantNotInLog string
+	}{
+		{"client disconnected", true, "client disconnected", "stream failed"},
+		{"upstream failure", false, "stream failed", "client disconnected"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs strings.Builder
+			log.SetOutput(&logs)
+			t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+			ctx, cancel := context.WithCancel(context.Background())
+			if tt.cancelled {
+				cancel()
+			}
+			defer cancel()
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body)).WithContext(ctx)
+			rec := httptest.NewRecorder()
+
+			chatCompletionsHandler(fakeProvider{streamErr: errors.New("boom")})(rec, req)
+
+			if !strings.Contains(logs.String(), tt.wantLog) {
+				t.Errorf("log = %q, want it to contain %q", logs.String(), tt.wantLog)
+			}
+			if strings.Contains(logs.String(), tt.wantNotInLog) {
+				t.Errorf("log = %q, want it not to contain %q", logs.String(), tt.wantNotInLog)
+			}
+			if strings.Contains(rec.Body.String(), "[DONE]") {
+				t.Errorf("body = %q, want no [DONE] after a failed stream", rec.Body.String())
+			}
+		})
 	}
 }

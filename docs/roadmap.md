@@ -15,7 +15,7 @@
 - [x] SSE streaming
 - [x] client cancellation
 - [x] provider streaming abstraction
-- [ ] disconnect handling
+- [x] disconnect handling
 - [ ] graceful shutdown
 
 ## Phase 3 — Reliability
