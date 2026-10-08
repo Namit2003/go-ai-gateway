@@ -12,16 +12,34 @@ import (
 
 type fakeProvider struct {
 	resp   ChatCompletionResponse
-	stream string
+	chunks []ChatCompletionChunk
 	err    error
 }
+
+type fakeStream struct {
+	chunks []ChatCompletionChunk
+}
+
+func (s *fakeStream) Recv() (ChatCompletionChunk, error) {
+	if len(s.chunks) == 0 {
+		return ChatCompletionChunk{}, io.EOF
+	}
+	chunk := s.chunks[0]
+	s.chunks = s.chunks[1:]
+	return chunk, nil
+}
+
+func (s *fakeStream) Close() error { return nil }
 
 func (f fakeProvider) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
 	return f.resp, f.err
 }
 
-func (f fakeProvider) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (io.ReadCloser, error) {
-	return io.NopCloser(strings.NewReader(f.stream)), f.err
+func (f fakeProvider) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (Stream, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &fakeStream{chunks: f.chunks}, nil
 }
 
 func TestChatCompletionsHandler(t *testing.T) {
@@ -66,13 +84,14 @@ func TestChatCompletionsHandler(t *testing.T) {
 }
 
 func TestChatCompletionsHandlerStream(t *testing.T) {
-	events := "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: [DONE]\n\n"
+	chunks := []ChatCompletionChunk{{Model: "m", Choices: []ChunkChoice{{Index: 0, Delta: Message{Role: "assistant", Content: "hi"}}}}}
+	events := "data: {\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"hi\"}}]}\n\ndata: [DONE]\n\n"
 	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	chatCompletionsHandler(fakeProvider{stream: events})(rec, req)
+	chatCompletionsHandler(fakeProvider{chunks: chunks})(rec, req)
 
 	if got := rec.Header().Get("Content-Type"); got != "text/event-stream" {
 		t.Errorf("Content-Type = %q, want %q", got, "text/event-stream")

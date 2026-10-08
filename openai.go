@@ -20,3 +20,13 @@ type ChatCompletionResponse struct {
 	Model   string   `json:"model"`
 	Choices []Choice `json:"choices"`
 }
+
+type ChunkChoice struct {
+	Index int     `json:"index"`
+	Delta Message `json:"delta"`
+}
+
+type ChatCompletionChunk struct {
+	Model   string        `json:"model"`
+	Choices []ChunkChoice `json:"choices"`
+}

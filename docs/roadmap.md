@@ -14,7 +14,7 @@
 
 - [x] SSE streaming
 - [x] client cancellation
-- [ ] provider streaming abstraction
+- [x] provider streaming abstraction
 - [ ] disconnect handling
 - [ ] graceful shutdown
 

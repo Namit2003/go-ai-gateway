@@ -64,7 +64,7 @@ func TestOpenAIChatCompletionUpstreamError(t *testing.T) {
 func TestOpenAIChatCompletionStreamCancel(t *testing.T) {
 	upstreamDone := make(chan struct{})
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("data: hi\n\n"))
+		w.Write([]byte("data: {}\n\n"))
 		w.(http.Flusher).Flush()
 		<-r.Context().Done()
 		close(upstreamDone)
@@ -82,13 +82,48 @@ func TestOpenAIChatCompletionStreamCancel(t *testing.T) {
 
 	cancel()
 
-	if _, err := io.ReadAll(stream); err == nil {
-		t.Error("reading the stream after cancel returned no error")
+	for err == nil {
+		_, err = stream.Recv()
+	}
+	if err == io.EOF {
+		t.Error("stream ended normally, want an error after cancel")
 	}
 
 	select {
 	case <-upstreamDone:
 	case <-time.After(time.Second):
 		t.Error("upstream request was not cancelled")
+	}
+}
+
+func TestOpenAIChatCompletionStream(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("data: {\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hel\"}}]}\n\n"))
+		w.Write([]byte("data: {\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"lo\"}}]}\n\n"))
+		w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer upstream.Close()
+
+	o := OpenAI{BaseURL: upstream.URL}
+
+	stream, err := o.ChatCompletionStream(context.Background(), ChatCompletionRequest{Model: "m", Stream: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer stream.Close()
+
+	var got string
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got += chunk.Choices[0].Delta.Content
+	}
+	if got != "Hello" {
+		t.Errorf("content = %q, want %q", got, "Hello")
 	}
 }

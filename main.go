@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 )
@@ -34,12 +34,21 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 
 			w.Header().Set("Content-Type", "text/event-stream")
 			flusher := w.(http.Flusher)
-			scanner := bufio.NewScanner(stream)
-			for scanner.Scan() {
-				fmt.Fprintln(w, scanner.Text())
+			for {
+				chunk, err := stream.Recv()
+				if err == io.EOF {
+					fmt.Fprint(w, "data: [DONE]\n\n")
+					flusher.Flush()
+					return
+				}
+				if err != nil {
+					log.Printf("stream failed: %v", err)
+					return
+				}
+				data, _ := json.Marshal(chunk)
+				fmt.Fprintf(w, "data: %s\n\n", data)
 				flusher.Flush()
 			}
-			return
 		}
 		resp, err := provider.ChatCompletion(r.Context(), req)
 		if err != nil {

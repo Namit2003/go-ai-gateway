@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type OpenAI struct {
@@ -43,7 +45,7 @@ func (o OpenAI) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (
 	return out, err
 }
 
-func (o OpenAI) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (io.ReadCloser, error) {
+func (o OpenAI) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (Stream, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -66,5 +68,33 @@ func (o OpenAI) ChatCompletionStream(ctx context.Context, req ChatCompletionRequ
 		return nil, &UpstreamError{StatusCode: resp.StatusCode}
 	}
 
-	return resp.Body, nil
+	return &openAIStream{body: resp.Body, scanner: bufio.NewScanner(resp.Body)}, nil
+}
+
+type openAIStream struct {
+	body    io.ReadCloser
+	scanner *bufio.Scanner
+}
+
+func (s *openAIStream) Recv() (ChatCompletionChunk, error) {
+	var chunk ChatCompletionChunk
+	for s.scanner.Scan() {
+		data, ok := strings.CutPrefix(s.scanner.Text(), "data: ")
+		if !ok {
+			continue
+		}
+		if data == "[DONE]" {
+			return chunk, io.EOF
+		}
+		err := json.Unmarshal([]byte(data), &chunk)
+		return chunk, err
+	}
+	if err := s.scanner.Err(); err != nil {
+		return chunk, err
+	}
+	return chunk, io.EOF
+}
+
+func (s *openAIStream) Close() error {
+	return s.body.Close()
 }
