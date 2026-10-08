@@ -4,7 +4,7 @@
 
 - [x] HTTP server
 - [x] configuration
-- [ ] OpenAI-compatible request structs
+- [x] OpenAI-compatible request structs
 - [ ] provider interface
 - [ ] OpenAI provider
 - [ ] basic error handling
