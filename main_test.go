@@ -91,8 +91,21 @@ func TestChatCompletionsHandler(t *testing.T) {
 }
 
 func TestChatCompletionsHandlerStream(t *testing.T) {
-	chunks := []ChatCompletionChunk{{Model: "m", Choices: []ChunkChoice{{Index: 0, Delta: Message{Role: "assistant", Content: "hi"}}}}}
-	events := "data: {\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"hi\"}}]}\n\ndata: [DONE]\n\n"
+	stop := "stop"
+	chunks := []ChatCompletionChunk{
+		{ID: "c1", Object: "chat.completion.chunk", Created: 1, Model: "m", Choices: []ChunkChoice{{Delta: Delta{ReasoningContent: "think"}}}},
+		{ID: "c1", Object: "chat.completion.chunk", Created: 1, Model: "m", Choices: []ChunkChoice{{Delta: Delta{Content: "hi"}}}},
+		{ID: "c1", Object: "chat.completion.chunk", Created: 1, Model: "m", Choices: []ChunkChoice{{FinishReason: &stop}}},
+	}
+	events := `data: {"id":"c1","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{"reasoning_content":"think"},"finish_reason":null}]}
+
+data: {"id":"c1","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{"content":"hi"},"finish_reason":null}]}
+
+data: {"id":"c1","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+
+`
 	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
