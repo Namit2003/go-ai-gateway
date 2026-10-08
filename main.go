@@ -81,6 +81,8 @@ func writeProviderError(w http.ResponseWriter, err error) {
 
 func main() {
 	cfg := LoadConfig()
+	maxAttempts = cfg.MaxAttempts
+	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
 	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL}
 
 	mux := http.NewServeMux()

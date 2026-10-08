@@ -1,11 +1,16 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("OPENAI_API_KEY", "")
 	t.Setenv("OPENAI_BASE_URL", "")
+	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "")
+	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "")
 
 	cfg := LoadConfig()
 
@@ -18,12 +23,20 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.OpenAIBaseURL != "https://api.openai.com/v1" {
 		t.Errorf("OpenAIBaseURL = %q, want %q", cfg.OpenAIBaseURL, "https://api.openai.com/v1")
 	}
+	if cfg.MaxAttempts != 3 {
+		t.Errorf("MaxAttempts = %d, want 3", cfg.MaxAttempts)
+	}
+	if cfg.HeaderTimeout != 60*time.Second {
+		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("PORT", "9000")
 	t.Setenv("OPENAI_API_KEY", "secret")
 	t.Setenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
+	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "5")
+	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "120")
 
 	cfg := LoadConfig()
 
@@ -35,5 +48,25 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.OpenAIBaseURL != "http://localhost:8000/v1" {
 		t.Errorf("OpenAIBaseURL = %q, want %q", cfg.OpenAIBaseURL, "http://localhost:8000/v1")
+	}
+	if cfg.MaxAttempts != 5 {
+		t.Errorf("MaxAttempts = %d, want 5", cfg.MaxAttempts)
+	}
+	if cfg.HeaderTimeout != 120*time.Second {
+		t.Errorf("HeaderTimeout = %v, want 120s", cfg.HeaderTimeout)
+	}
+}
+
+func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
+	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "abc")
+	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "-5")
+
+	cfg := LoadConfig()
+
+	if cfg.MaxAttempts != 3 {
+		t.Errorf("MaxAttempts = %d, want 3", cfg.MaxAttempts)
+	}
+	if cfg.HeaderTimeout != 60*time.Second {
+		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
 	}
 }

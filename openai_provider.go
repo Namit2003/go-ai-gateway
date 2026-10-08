@@ -12,16 +12,17 @@ import (
 	"time"
 )
 
-const (
-	maxAttempts    = 3
-	retryBaseDelay = 100 * time.Millisecond
-)
+const retryBaseDelay = 100 * time.Millisecond
 
-var upstreamClient = func() *http.Client {
+var maxAttempts = 3
+
+var upstreamClient = newUpstreamClient(60 * time.Second)
+
+func newUpstreamClient(headerTimeout time.Duration) *http.Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.ResponseHeaderTimeout = 60 * time.Second
+	t.ResponseHeaderTimeout = headerTimeout
 	return &http.Client{Transport: t}
-}()
+}
 
 type OpenAI struct {
 	APIKey  string

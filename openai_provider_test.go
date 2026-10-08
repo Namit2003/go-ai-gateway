@@ -150,9 +150,7 @@ func TestOpenAIChatCompletionStream(t *testing.T) {
 func TestOpenAIChatCompletionHeaderTimeout(t *testing.T) {
 	old := upstreamClient
 	t.Cleanup(func() { upstreamClient = old })
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.ResponseHeaderTimeout = 50 * time.Millisecond
-	upstreamClient = &http.Client{Transport: transport}
+	upstreamClient = newUpstreamClient(50 * time.Millisecond)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(300 * time.Millisecond)

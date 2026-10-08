@@ -1,11 +1,17 @@
 package main
 
-import "os"
+import (
+	"os"
+	"strconv"
+	"time"
+)
 
 type Config struct {
 	Port          string
 	OpenAIKey     string
 	OpenAIBaseURL string
+	MaxAttempts   int
+	HeaderTimeout time.Duration
 }
 
 func LoadConfig() Config {
@@ -19,9 +25,21 @@ func LoadConfig() Config {
 		baseURL = "https://api.openai.com/v1"
 	}
 
+	maxAttempts := 3
+	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_MAX_ATTEMPTS")); err == nil && n > 0 {
+		maxAttempts = n
+	}
+
+	headerTimeout := 60 * time.Second
+	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_HEADER_TIMEOUT_SECONDS")); err == nil && n > 0 {
+		headerTimeout = time.Duration(n) * time.Second
+	}
+
 	return Config{
 		Port:          port,
 		OpenAIKey:     os.Getenv("OPENAI_API_KEY"),
 		OpenAIBaseURL: baseURL,
+		MaxAttempts:   maxAttempts,
+		HeaderTimeout: headerTimeout,
 	}
 }
