@@ -21,8 +21,8 @@
 ## Phase 3 — Reliability
 
 - [x] timeouts
-- [ ] retry policy
-- [ ] exponential backoff
+- [x] retry policy
+- [x] exponential backoff
 - [ ] circuit breaker
 - [ ] fallback provider
 

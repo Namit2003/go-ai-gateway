@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	maxAttempts    = 3
+	retryBaseDelay = 100 * time.Millisecond
+)
+
 var upstreamClient = func() *http.Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.ResponseHeaderTimeout = 60 * time.Second
@@ -23,6 +28,43 @@ type OpenAI struct {
 	BaseURL string
 }
 
+func (o OpenAI) post(ctx context.Context, body []byte) (*http.Response, error) {
+	var lastErr error
+	for attempt := range maxAttempts {
+		if attempt > 0 {
+			select {
+			case <-time.After(retryBaseDelay << (attempt - 1)):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, o.BaseURL+"/chat/completions", bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set("Authorization", "Bearer "+o.APIKey)
+		httpReq.Header.Set("Content-Type", "application/json")
+
+		resp, err := upstreamClient.Do(httpReq)
+		if err != nil {
+			lastErr = fmt.Errorf("calling openai: %w", err)
+			if ctx.Err() != nil {
+				return nil, lastErr
+			}
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			return resp, nil
+		}
+		resp.Body.Close()
+		lastErr = &UpstreamError{StatusCode: resp.StatusCode}
+		if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode < 500 {
+			return nil, lastErr
+		}
+	}
+	return nil, lastErr
+}
+
 func (o OpenAI) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
 	var out ChatCompletionResponse
 
@@ -31,22 +73,11 @@ func (o OpenAI) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (
 		return out, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, o.BaseURL+"/chat/completions", bytes.NewReader(body))
+	resp, err := o.post(ctx, body)
 	if err != nil {
 		return out, err
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+o.APIKey)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := upstreamClient.Do(httpReq)
-	if err != nil {
-		return out, fmt.Errorf("calling openai: %w", err)
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return out, &UpstreamError{StatusCode: resp.StatusCode}
-	}
 
 	err = json.NewDecoder(resp.Body).Decode(&out)
 	return out, err
@@ -58,21 +89,9 @@ func (o OpenAI) ChatCompletionStream(ctx context.Context, req ChatCompletionRequ
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, o.BaseURL+"/chat/completions", bytes.NewReader(body))
+	resp, err := o.post(ctx, body)
 	if err != nil {
 		return nil, err
-	}
-	httpReq.Header.Set("Authorization", "Bearer "+o.APIKey)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := upstreamClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("calling openai: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, &UpstreamError{StatusCode: resp.StatusCode}
 	}
 
 	return &openAIStream{body: resp.Body, scanner: bufio.NewScanner(resp.Body)}, nil

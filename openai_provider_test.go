@@ -165,3 +165,63 @@ func TestOpenAIChatCompletionHeaderTimeout(t *testing.T) {
 		t.Fatal("expected a timeout error, got nil")
 	}
 }
+
+func TestOpenAIChatCompletionRetries(t *testing.T) {
+	tests := []struct {
+		name      string
+		statuses  []int
+		wantCalls int
+		wantErr   bool
+	}{
+		{"retries 503 then succeeds", []int{503, 429, 200}, 3, false},
+		{"gives up after max attempts", []int{500, 500, 500, 200}, 3, true},
+		{"does not retry 401", []int{401, 200}, 1, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				status := tt.statuses[calls]
+				calls++
+				w.WriteHeader(status)
+				if status == http.StatusOK {
+					w.Write([]byte(`{"model":"m"}`))
+				}
+			}))
+			defer srv.Close()
+
+			p := OpenAI{BaseURL: srv.URL}
+			_, err := p.ChatCompletion(context.Background(), ChatCompletionRequest{Model: "m"})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if calls != tt.wantCalls {
+				t.Errorf("calls = %d, want %d", calls, tt.wantCalls)
+			}
+		})
+	}
+}
+
+func TestOpenAIChatCompletionStopsRetryingWhenCancelled(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	p := OpenAI{BaseURL: srv.URL}
+	_, err := p.ChatCompletion(ctx, ChatCompletionRequest{Model: "m"})
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("err = %v, want context.DeadlineExceeded", err)
+	}
+	if calls != 1 {
+		t.Errorf("calls = %d, want 1", calls)
+	}
+}
