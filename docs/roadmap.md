@@ -8,7 +8,7 @@
 - [x] provider interface
 - [x] OpenAI provider
 - [x] basic error handling
-- [ ] unit tests
+- [x] unit tests
 
 ## Phase 2 — Streaming
 
