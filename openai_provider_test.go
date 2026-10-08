@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestOpenAIChatCompletionSuccess(t *testing.T) {
@@ -56,5 +58,37 @@ func TestOpenAIChatCompletionUpstreamError(t *testing.T) {
 	}
 	if upErr.StatusCode != http.StatusUnauthorized {
 		t.Errorf("StatusCode = %d, want %d", upErr.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestOpenAIChatCompletionStreamCancel(t *testing.T) {
+	upstreamDone := make(chan struct{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("data: hi\n\n"))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+		close(upstreamDone)
+	}))
+	defer upstream.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	o := OpenAI{BaseURL: upstream.URL}
+
+	stream, err := o.ChatCompletionStream(ctx, ChatCompletionRequest{Model: "m", Stream: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer stream.Close()
+
+	cancel()
+
+	if _, err := io.ReadAll(stream); err == nil {
+		t.Error("reading the stream after cancel returned no error")
+	}
+
+	select {
+	case <-upstreamDone:
+	case <-time.After(time.Second):
+		t.Error("upstream request was not cancelled")
 	}
 }
