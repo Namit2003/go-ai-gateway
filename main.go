@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -14,10 +13,7 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	cfg := LoadConfig()
 
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
 }

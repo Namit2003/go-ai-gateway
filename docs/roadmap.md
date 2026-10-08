@@ -16,6 +16,7 @@
 - [ ] client cancellation
 - [ ] provider streaming abstraction
 - [ ] disconnect handling
+- [ ] graceful shutdown
 
 ## Phase 3 — Reliability
 
