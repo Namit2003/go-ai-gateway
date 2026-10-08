@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -22,20 +24,41 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "invalid_request_error", "messages is required")
 			return
 		}
-		resp, err := provider.ChatCompletion(r.Context(), req)
-		if err != nil {
-			log.Printf("chat completion failed: %v", err)
-			var upErr *UpstreamError
-			if errors.As(err, &upErr) && upErr.StatusCode == http.StatusTooManyRequests {
-				writeError(w, http.StatusTooManyRequests, "rate_limit_error", "upstream rate limit exceeded")
+		if req.Stream {
+			stream, err := provider.ChatCompletionStream(r.Context(), req)
+			if err != nil {
+				writeProviderError(w, err)
 				return
 			}
-			writeError(w, http.StatusBadGateway, "upstream_error", "upstream request failed")
+			defer stream.Close()
+
+			w.Header().Set("Content-Type", "text/event-stream")
+			flusher := w.(http.Flusher)
+			scanner := bufio.NewScanner(stream)
+			for scanner.Scan() {
+				fmt.Fprintln(w, scanner.Text())
+				flusher.Flush()
+			}
+			return
+		}
+		resp, err := provider.ChatCompletion(r.Context(), req)
+		if err != nil {
+			writeProviderError(w, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
+}
+
+func writeProviderError(w http.ResponseWriter, err error) {
+	log.Printf("chat completion failed: %v", err)
+	var upErr *UpstreamError
+	if errors.As(err, &upErr) && upErr.StatusCode == http.StatusTooManyRequests {
+		writeError(w, http.StatusTooManyRequests, "rate_limit_error", "upstream rate limit exceeded")
+		return
+	}
+	writeError(w, http.StatusBadGateway, "upstream_error", "upstream request failed")
 }
 
 func main() {

@@ -12,7 +12,7 @@
 
 ## Phase 2 — Streaming
 
-- [ ] SSE streaming
+- [x] SSE streaming
 - [ ] client cancellation
 - [ ] provider streaming abstraction
 - [ ] disconnect handling

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,12 +11,17 @@ import (
 )
 
 type fakeProvider struct {
-	resp ChatCompletionResponse
-	err  error
+	resp   ChatCompletionResponse
+	stream string
+	err    error
 }
 
 func (f fakeProvider) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
 	return f.resp, f.err
+}
+
+func (f fakeProvider) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader(f.stream)), f.err
 }
 
 func TestChatCompletionsHandler(t *testing.T) {
@@ -56,5 +62,22 @@ func TestChatCompletionsHandler(t *testing.T) {
 				t.Errorf("body = %q, want it to contain %q", rec.Body.String(), tt.wantInBody)
 			}
 		})
+	}
+}
+
+func TestChatCompletionsHandlerStream(t *testing.T) {
+	events := "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: [DONE]\n\n"
+	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	chatCompletionsHandler(fakeProvider{stream: events})(rec, req)
+
+	if got := rec.Header().Get("Content-Type"); got != "text/event-stream" {
+		t.Errorf("Content-Type = %q, want %q", got, "text/event-stream")
+	}
+	if rec.Body.String() != events {
+		t.Errorf("body = %q, want %q", rec.Body.String(), events)
 	}
 }
