@@ -29,7 +29,7 @@
 ## Phase 4 — Traffic Control
 
 - [x] rate limiter
-- [ ] concurrency limiter
+- [x] concurrency limiter
 - [ ] quotas
 
 ## Phase 5 — Routing

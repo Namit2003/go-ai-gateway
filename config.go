@@ -19,6 +19,7 @@ type Config struct {
 	FallbackModel    string
 	RateLimit        int
 	RateBurst        int
+	MaxConcurrent    int
 }
 
 func LoadConfig() Config {
@@ -62,6 +63,11 @@ func LoadConfig() Config {
 		rateBurst = n
 	}
 
+	maxConcurrent := 100
+	if n, err := strconv.Atoi(os.Getenv("MAX_CONCURRENT_REQUESTS")); err == nil && n > 0 {
+		maxConcurrent = n
+	}
+
 	return Config{
 		Port:             port,
 		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
@@ -75,5 +81,6 @@ func LoadConfig() Config {
 		FallbackModel:    os.Getenv("FALLBACK_MODEL"),
 		RateLimit:        rateLimit,
 		RateBurst:        rateBurst,
+		MaxConcurrent:    maxConcurrent,
 	}
 }

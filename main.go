@@ -109,7 +109,7 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.Handle("POST /v1/chat/completions", rateLimit(limiter, chatCompletionsHandler(provider)))
+	mux.Handle("POST /v1/chat/completions", rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, chatCompletionsHandler(provider))))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 

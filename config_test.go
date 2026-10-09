@@ -18,6 +18,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("FALLBACK_MODEL", "")
 	t.Setenv("RATE_LIMIT_PER_SECOND", "")
 	t.Setenv("RATE_LIMIT_BURST", "")
+	t.Setenv("MAX_CONCURRENT_REQUESTS", "")
 
 	cfg := LoadConfig()
 
@@ -51,6 +52,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.RateBurst != 20 {
 		t.Errorf("RateBurst = %d, want 20", cfg.RateBurst)
 	}
+	if cfg.MaxConcurrent != 100 {
+		t.Errorf("MaxConcurrent = %d, want 100", cfg.MaxConcurrent)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -66,6 +70,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("FALLBACK_MODEL", "qwen")
 	t.Setenv("RATE_LIMIT_PER_SECOND", "50")
 	t.Setenv("RATE_LIMIT_BURST", "100")
+	t.Setenv("MAX_CONCURRENT_REQUESTS", "7")
 
 	cfg := LoadConfig()
 
@@ -105,6 +110,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	if cfg.RateBurst != 100 {
 		t.Errorf("RateBurst = %d, want 100", cfg.RateBurst)
 	}
+	if cfg.MaxConcurrent != 7 {
+		t.Errorf("MaxConcurrent = %d, want 7", cfg.MaxConcurrent)
+	}
 }
 
 func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
@@ -114,6 +122,7 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "abc")
 	t.Setenv("RATE_LIMIT_PER_SECOND", "0")
 	t.Setenv("RATE_LIMIT_BURST", "-1")
+	t.Setenv("MAX_CONCURRENT_REQUESTS", "abc")
 
 	cfg := LoadConfig()
 
@@ -134,5 +143,8 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	}
 	if cfg.RateBurst != 20 {
 		t.Errorf("RateBurst = %d, want 20", cfg.RateBurst)
+	}
+	if cfg.MaxConcurrent != 100 {
+		t.Errorf("MaxConcurrent = %d, want 100", cfg.MaxConcurrent)
 	}
 }
