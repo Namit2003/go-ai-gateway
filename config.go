@@ -7,11 +7,13 @@ import (
 )
 
 type Config struct {
-	Port          string
-	OpenAIKey     string
-	OpenAIBaseURL string
-	MaxAttempts   int
-	HeaderTimeout time.Duration
+	Port             string
+	OpenAIKey        string
+	OpenAIBaseURL    string
+	MaxAttempts      int
+	HeaderTimeout    time.Duration
+	BreakerThreshold int
+	BreakerCooldown  time.Duration
 }
 
 func LoadConfig() Config {
@@ -35,11 +37,23 @@ func LoadConfig() Config {
 		headerTimeout = time.Duration(n) * time.Second
 	}
 
+	breakerThreshold := 5
+	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_BREAKER_THRESHOLD")); err == nil && n > 0 {
+		breakerThreshold = n
+	}
+
+	breakerCooldown := 30 * time.Second
+	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS")); err == nil && n > 0 {
+		breakerCooldown = time.Duration(n) * time.Second
+	}
+
 	return Config{
-		Port:          port,
-		OpenAIKey:     os.Getenv("OPENAI_API_KEY"),
-		OpenAIBaseURL: baseURL,
-		MaxAttempts:   maxAttempts,
-		HeaderTimeout: headerTimeout,
+		Port:             port,
+		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
+		OpenAIBaseURL:    baseURL,
+		MaxAttempts:      maxAttempts,
+		HeaderTimeout:    headerTimeout,
+		BreakerThreshold: breakerThreshold,
+		BreakerCooldown:  breakerCooldown,
 	}
 }

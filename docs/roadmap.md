@@ -23,7 +23,7 @@
 - [x] timeouts
 - [x] retry policy
 - [x] exponential backoff
-- [ ] circuit breaker
+- [x] circuit breaker
 - [ ] fallback provider
 
 ## Phase 4 — Traffic Control

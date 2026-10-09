@@ -71,6 +71,10 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 
 func writeProviderError(w http.ResponseWriter, err error) {
 	log.Printf("chat completion failed: %v", err)
+	if errors.Is(err, ErrCircuitOpen) {
+		writeError(w, http.StatusServiceUnavailable, "upstream_error", "upstream temporarily unavailable")
+		return
+	}
 	var upErr *UpstreamError
 	if errors.As(err, &upErr) && upErr.StatusCode == http.StatusTooManyRequests {
 		writeError(w, http.StatusTooManyRequests, "rate_limit_error", "upstream rate limit exceeded")
@@ -83,7 +87,7 @@ func main() {
 	cfg := LoadConfig()
 	maxAttempts = cfg.MaxAttempts
 	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
-	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL}
+	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)}
 
 	mux := http.NewServeMux()
 

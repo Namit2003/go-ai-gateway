@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,9 +28,32 @@ func newUpstreamClient(headerTimeout time.Duration) *http.Client {
 type OpenAI struct {
 	APIKey  string
 	BaseURL string
+	Breaker *CircuitBreaker
+}
+
+func retryableStatus(code int) bool {
+	return code == http.StatusTooManyRequests || code >= 500
 }
 
 func (o OpenAI) post(ctx context.Context, body []byte) (*http.Response, error) {
+	if o.Breaker == nil {
+		return o.postWithRetries(ctx, body)
+	}
+	if !o.Breaker.Allow() {
+		return nil, ErrCircuitOpen
+	}
+	resp, err := o.postWithRetries(ctx, body)
+
+	failed := err != nil && ctx.Err() == nil
+	var upErr *UpstreamError
+	if errors.As(err, &upErr) {
+		failed = retryableStatus(upErr.StatusCode)
+	}
+	o.Breaker.Record(failed)
+	return resp, err
+}
+
+func (o OpenAI) postWithRetries(ctx context.Context, body []byte) (*http.Response, error) {
 	var lastErr error
 	for attempt := range maxAttempts {
 		if attempt > 0 {
@@ -59,7 +83,7 @@ func (o OpenAI) post(ctx context.Context, body []byte) (*http.Response, error) {
 		}
 		resp.Body.Close()
 		lastErr = &UpstreamError{StatusCode: resp.StatusCode}
-		if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode < 500 {
+		if !retryableStatus(resp.StatusCode) {
 			return nil, lastErr
 		}
 	}

@@ -223,3 +223,39 @@ func TestOpenAIChatCompletionStopsRetryingWhenCancelled(t *testing.T) {
 		t.Errorf("calls = %d, want 1", calls)
 	}
 }
+
+func TestOpenAIBreaker(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    int
+		wantCalls int
+		wantOpen  bool
+	}{
+		{"opens after repeated 503s", 503, 6, true},
+		{"4xx does not trip it", 401, 3, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				w.WriteHeader(tt.status)
+			}))
+			defer srv.Close()
+
+			p := OpenAI{BaseURL: srv.URL, Breaker: NewCircuitBreaker(2, time.Hour)}
+			var err error
+			for range 3 {
+				_, err = p.ChatCompletion(context.Background(), ChatCompletionRequest{Model: "m"})
+			}
+
+			if errors.Is(err, ErrCircuitOpen) != tt.wantOpen {
+				t.Errorf("last err = %v, circuit open = %v", err, tt.wantOpen)
+			}
+			if calls != tt.wantCalls {
+				t.Errorf("upstream calls = %d, want %d", calls, tt.wantCalls)
+			}
+		})
+	}
+}

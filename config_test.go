@@ -11,6 +11,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("OPENAI_BASE_URL", "")
 	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "")
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "")
+	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "")
+	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "")
 
 	cfg := LoadConfig()
 
@@ -29,6 +31,12 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.HeaderTimeout != 60*time.Second {
 		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
 	}
+	if cfg.BreakerThreshold != 5 {
+		t.Errorf("BreakerThreshold = %d, want 5", cfg.BreakerThreshold)
+	}
+	if cfg.BreakerCooldown != 30*time.Second {
+		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -37,6 +45,8 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
 	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "5")
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "120")
+	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "10")
+	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "45")
 
 	cfg := LoadConfig()
 
@@ -55,11 +65,19 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	if cfg.HeaderTimeout != 120*time.Second {
 		t.Errorf("HeaderTimeout = %v, want 120s", cfg.HeaderTimeout)
 	}
+	if cfg.BreakerThreshold != 10 {
+		t.Errorf("BreakerThreshold = %d, want 10", cfg.BreakerThreshold)
+	}
+	if cfg.BreakerCooldown != 45*time.Second {
+		t.Errorf("BreakerCooldown = %v, want 45s", cfg.BreakerCooldown)
+	}
 }
 
 func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	t.Setenv("UPSTREAM_MAX_ATTEMPTS", "abc")
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "-5")
+	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "0")
+	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "abc")
 
 	cfg := LoadConfig()
 
@@ -68,5 +86,11 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	}
 	if cfg.HeaderTimeout != 60*time.Second {
 		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
+	}
+	if cfg.BreakerThreshold != 5 {
+		t.Errorf("BreakerThreshold = %d, want 5", cfg.BreakerThreshold)
+	}
+	if cfg.BreakerCooldown != 30*time.Second {
+		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
 	}
 }
