@@ -17,6 +17,8 @@ type Config struct {
 	FallbackBaseURL  string
 	FallbackAPIKey   string
 	FallbackModel    string
+	RateLimit        int
+	RateBurst        int
 }
 
 func LoadConfig() Config {
@@ -50,6 +52,16 @@ func LoadConfig() Config {
 		breakerCooldown = time.Duration(n) * time.Second
 	}
 
+	rateLimit := 10
+	if n, err := strconv.Atoi(os.Getenv("RATE_LIMIT_PER_SECOND")); err == nil && n > 0 {
+		rateLimit = n
+	}
+
+	rateBurst := 20
+	if n, err := strconv.Atoi(os.Getenv("RATE_LIMIT_BURST")); err == nil && n > 0 {
+		rateBurst = n
+	}
+
 	return Config{
 		Port:             port,
 		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
@@ -61,5 +73,7 @@ func LoadConfig() Config {
 		FallbackBaseURL:  os.Getenv("FALLBACK_BASE_URL"),
 		FallbackAPIKey:   os.Getenv("FALLBACK_API_KEY"),
 		FallbackModel:    os.Getenv("FALLBACK_MODEL"),
+		RateLimit:        rateLimit,
+		RateBurst:        rateBurst,
 	}
 }

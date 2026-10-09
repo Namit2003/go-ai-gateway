@@ -12,6 +12,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 func chatCompletionsHandler(provider Provider) http.HandlerFunc {
@@ -85,6 +87,8 @@ func writeProviderError(w http.ResponseWriter, err error) {
 
 func main() {
 	cfg := LoadConfig()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	maxAttempts = cfg.MaxAttempts
 	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
 	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)}
@@ -96,6 +100,8 @@ func main() {
 		}
 	}
 
+	limiter := NewIPRateLimiter(ctx, rate.Limit(cfg.RateLimit), cfg.RateBurst)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -103,12 +109,9 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.HandleFunc("POST /v1/chat/completions", chatCompletionsHandler(provider))
+	mux.Handle("POST /v1/chat/completions", rateLimit(limiter, chatCompletionsHandler(provider)))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {

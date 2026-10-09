@@ -28,7 +28,7 @@
 
 ## Phase 4 — Traffic Control
 
-- [ ] rate limiter
+- [x] rate limiter
 - [ ] concurrency limiter
 - [ ] quotas
 

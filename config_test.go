@@ -16,6 +16,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("FALLBACK_BASE_URL", "")
 	t.Setenv("FALLBACK_API_KEY", "")
 	t.Setenv("FALLBACK_MODEL", "")
+	t.Setenv("RATE_LIMIT_PER_SECOND", "")
+	t.Setenv("RATE_LIMIT_BURST", "")
 
 	cfg := LoadConfig()
 
@@ -43,6 +45,12 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.FallbackBaseURL != "" || cfg.FallbackAPIKey != "" || cfg.FallbackModel != "" {
 		t.Errorf("fallback = %q %q %q, want all empty", cfg.FallbackBaseURL, cfg.FallbackAPIKey, cfg.FallbackModel)
 	}
+	if cfg.RateLimit != 10 {
+		t.Errorf("RateLimit = %d, want 10", cfg.RateLimit)
+	}
+	if cfg.RateBurst != 20 {
+		t.Errorf("RateBurst = %d, want 20", cfg.RateBurst)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -56,6 +64,8 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("FALLBACK_BASE_URL", "http://localhost:8000/v1")
 	t.Setenv("FALLBACK_API_KEY", "fallback-secret")
 	t.Setenv("FALLBACK_MODEL", "qwen")
+	t.Setenv("RATE_LIMIT_PER_SECOND", "50")
+	t.Setenv("RATE_LIMIT_BURST", "100")
 
 	cfg := LoadConfig()
 
@@ -89,6 +99,12 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	if cfg.FallbackModel != "qwen" {
 		t.Errorf("FallbackModel = %q, want %q", cfg.FallbackModel, "qwen")
 	}
+	if cfg.RateLimit != 50 {
+		t.Errorf("RateLimit = %d, want 50", cfg.RateLimit)
+	}
+	if cfg.RateBurst != 100 {
+		t.Errorf("RateBurst = %d, want 100", cfg.RateBurst)
+	}
 }
 
 func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
@@ -96,6 +112,8 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "-5")
 	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "0")
 	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "abc")
+	t.Setenv("RATE_LIMIT_PER_SECOND", "0")
+	t.Setenv("RATE_LIMIT_BURST", "-1")
 
 	cfg := LoadConfig()
 
@@ -110,5 +128,11 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	}
 	if cfg.BreakerCooldown != 30*time.Second {
 		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
+	}
+	if cfg.RateLimit != 10 {
+		t.Errorf("RateLimit = %d, want 10", cfg.RateLimit)
+	}
+	if cfg.RateBurst != 20 {
+		t.Errorf("RateBurst = %d, want 20", cfg.RateBurst)
 	}
 }
