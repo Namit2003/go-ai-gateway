@@ -14,6 +14,9 @@ type Config struct {
 	HeaderTimeout    time.Duration
 	BreakerThreshold int
 	BreakerCooldown  time.Duration
+	FallbackBaseURL  string
+	FallbackAPIKey   string
+	FallbackModel    string
 }
 
 func LoadConfig() Config {
@@ -55,5 +58,8 @@ func LoadConfig() Config {
 		HeaderTimeout:    headerTimeout,
 		BreakerThreshold: breakerThreshold,
 		BreakerCooldown:  breakerCooldown,
+		FallbackBaseURL:  os.Getenv("FALLBACK_BASE_URL"),
+		FallbackAPIKey:   os.Getenv("FALLBACK_API_KEY"),
+		FallbackModel:    os.Getenv("FALLBACK_MODEL"),
 	}
 }

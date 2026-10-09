@@ -13,6 +13,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "")
 	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "")
 	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "")
+	t.Setenv("FALLBACK_BASE_URL", "")
+	t.Setenv("FALLBACK_API_KEY", "")
+	t.Setenv("FALLBACK_MODEL", "")
 
 	cfg := LoadConfig()
 
@@ -37,6 +40,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.BreakerCooldown != 30*time.Second {
 		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
 	}
+	if cfg.FallbackBaseURL != "" || cfg.FallbackAPIKey != "" || cfg.FallbackModel != "" {
+		t.Errorf("fallback = %q %q %q, want all empty", cfg.FallbackBaseURL, cfg.FallbackAPIKey, cfg.FallbackModel)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -47,6 +53,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("UPSTREAM_HEADER_TIMEOUT_SECONDS", "120")
 	t.Setenv("UPSTREAM_BREAKER_THRESHOLD", "10")
 	t.Setenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS", "45")
+	t.Setenv("FALLBACK_BASE_URL", "http://localhost:8000/v1")
+	t.Setenv("FALLBACK_API_KEY", "fallback-secret")
+	t.Setenv("FALLBACK_MODEL", "qwen")
 
 	cfg := LoadConfig()
 
@@ -70,6 +79,15 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.BreakerCooldown != 45*time.Second {
 		t.Errorf("BreakerCooldown = %v, want 45s", cfg.BreakerCooldown)
+	}
+	if cfg.FallbackBaseURL != "http://localhost:8000/v1" {
+		t.Errorf("FallbackBaseURL = %q, want %q", cfg.FallbackBaseURL, "http://localhost:8000/v1")
+	}
+	if cfg.FallbackAPIKey != "fallback-secret" {
+		t.Errorf("FallbackAPIKey = %q, want %q", cfg.FallbackAPIKey, "fallback-secret")
+	}
+	if cfg.FallbackModel != "qwen" {
+		t.Errorf("FallbackModel = %q, want %q", cfg.FallbackModel, "qwen")
 	}
 }
 

@@ -88,6 +88,13 @@ func main() {
 	maxAttempts = cfg.MaxAttempts
 	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
 	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)}
+	if cfg.FallbackBaseURL != "" {
+		provider = FallbackProvider{
+			Primary:       provider,
+			Fallback:      OpenAI{APIKey: cfg.FallbackAPIKey, BaseURL: cfg.FallbackBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)},
+			FallbackModel: cfg.FallbackModel,
+		}
+	}
 
 	mux := http.NewServeMux()
 

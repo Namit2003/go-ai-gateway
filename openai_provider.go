@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,12 +43,7 @@ func (o OpenAI) post(ctx context.Context, body []byte) (*http.Response, error) {
 	}
 	resp, err := o.postWithRetries(ctx, body)
 
-	failed := err != nil && ctx.Err() == nil
-	var upErr *UpstreamError
-	if errors.As(err, &upErr) {
-		failed = retryableStatus(upErr.StatusCode)
-	}
-	o.Breaker.Record(failed)
+	o.Breaker.Record(upstreamFailed(ctx, err))
 	return resp, err
 }
 
