@@ -124,7 +124,7 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.Handle("POST /v1/chat/completions", requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, chatCompletionsHandler(provider)))))
+	mux.Handle("POST /v1/chat/completions", requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, quota(NewQuotaTracker(cfg.DailyQuota), chatCompletionsHandler(provider))))))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 

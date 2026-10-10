@@ -30,7 +30,7 @@
 
 - [x] rate limiter
 - [x] concurrency limiter
-- [ ] quotas
+- [x] quotas
 
 ## Phase 5 — Routing
 

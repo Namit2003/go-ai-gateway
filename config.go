@@ -21,6 +21,7 @@ type Config struct {
 	RateBurst        int
 	MaxConcurrent    int
 	APIKeysFile      string
+	DailyQuota       int
 }
 
 func LoadConfig() Config {
@@ -74,6 +75,11 @@ func LoadConfig() Config {
 		apiKeysFile = "keys.json"
 	}
 
+	dailyQuota := 1000
+	if n, err := strconv.Atoi(os.Getenv("QUOTA_REQUESTS_PER_DAY")); err == nil && n > 0 {
+		dailyQuota = n
+	}
+
 	return Config{
 		Port:             port,
 		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
@@ -89,5 +95,6 @@ func LoadConfig() Config {
 		RateBurst:        rateBurst,
 		MaxConcurrent:    maxConcurrent,
 		APIKeysFile:      apiKeysFile,
+		DailyQuota:       dailyQuota,
 	}
 }

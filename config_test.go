@@ -20,6 +20,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_BURST", "")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "")
 	t.Setenv("API_KEYS_FILE", "")
+	t.Setenv("QUOTA_REQUESTS_PER_DAY", "")
 
 	cfg := LoadConfig()
 
@@ -59,6 +60,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.APIKeysFile != "keys.json" {
 		t.Errorf("APIKeysFile = %q, want keys.json", cfg.APIKeysFile)
 	}
+	if cfg.DailyQuota != 1000 {
+		t.Errorf("DailyQuota = %d, want 1000", cfg.DailyQuota)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -76,6 +80,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("RATE_LIMIT_BURST", "100")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "7")
 	t.Setenv("API_KEYS_FILE", "/etc/gw/keys.json")
+	t.Setenv("QUOTA_REQUESTS_PER_DAY", "250")
 
 	cfg := LoadConfig()
 
@@ -121,6 +126,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	if cfg.APIKeysFile != "/etc/gw/keys.json" {
 		t.Errorf("APIKeysFile = %q, want /etc/gw/keys.json", cfg.APIKeysFile)
 	}
+	if cfg.DailyQuota != 250 {
+		t.Errorf("DailyQuota = %d, want 250", cfg.DailyQuota)
+	}
 }
 
 func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
@@ -131,6 +139,7 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_PER_SECOND", "0")
 	t.Setenv("RATE_LIMIT_BURST", "-1")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "abc")
+	t.Setenv("QUOTA_REQUESTS_PER_DAY", "0")
 
 	cfg := LoadConfig()
 
@@ -154,5 +163,8 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	}
 	if cfg.MaxConcurrent != 100 {
 		t.Errorf("MaxConcurrent = %d, want 100", cfg.MaxConcurrent)
+	}
+	if cfg.DailyQuota != 1000 {
+		t.Errorf("DailyQuota = %d, want 1000", cfg.DailyQuota)
 	}
 }
