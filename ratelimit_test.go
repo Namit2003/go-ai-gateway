@@ -9,29 +9,29 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func newTestLimiter(t *testing.T, limit rate.Limit, burst int) *IPRateLimiter {
+func newTestLimiter(t *testing.T, limit rate.Limit, burst int) *ClientRateLimiter {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	return NewIPRateLimiter(ctx, limit, burst)
+	return NewClientRateLimiter(ctx, limit, burst)
 }
 
-func TestIPRateLimiterAllow(t *testing.T) {
+func TestClientRateLimiterAllow(t *testing.T) {
 	l := newTestLimiter(t, 0.001, 2)
 
-	if !l.Allow("1.1.1.1") || !l.Allow("1.1.1.1") {
+	if !l.Allow("alice") || !l.Allow("alice") {
 		t.Fatal("first 2 requests (the burst) should be allowed")
 	}
-	if l.Allow("1.1.1.1") {
+	if l.Allow("alice") {
 		t.Error("3rd request should be rejected")
 	}
-	if !l.Allow("2.2.2.2") {
-		t.Error("a different IP should have its own limit")
+	if !l.Allow("bob") {
+		t.Error("a different client should have its own limit")
 	}
 }
 
-func TestIPRateLimiterCleanup(t *testing.T) {
+func TestClientRateLimiterCleanup(t *testing.T) {
 	l := newTestLimiter(t, 1, 1)
-	l.Allow("1.1.1.1")
+	l.Allow("alice")
 
 	l.cleanup(idleTTL)
 	if len(l.clients) != 1 {
@@ -50,28 +50,25 @@ func TestRateLimitMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	for i, want := range []int{http.StatusOK, http.StatusTooManyRequests} {
+	send := func(client, remoteAddr string) int {
 		req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-		req.RemoteAddr = "1.1.1.1:5000"
+		req.RemoteAddr = remoteAddr
+		req = req.WithContext(context.WithValue(req.Context(), clientKey{}, client))
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
-		if rec.Code != want {
-			t.Errorf("request %d: status = %d, want %d", i+1, rec.Code, want)
-		}
+		return rec.Code
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.RemoteAddr = "1.1.1.1:6000"
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	if rec.Code != http.StatusTooManyRequests {
-		t.Errorf("same IP on a new port: status = %d, want 429", rec.Code)
+	if got := send("alice", "1.1.1.1:5000"); got != http.StatusOK {
+		t.Errorf("first request: status = %d, want 200", got)
 	}
-
-	req.RemoteAddr = "2.2.2.2:5000"
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Errorf("different IP: status = %d, want 200", rec.Code)
+	if got := send("alice", "1.1.1.1:5000"); got != http.StatusTooManyRequests {
+		t.Errorf("second request: status = %d, want 429", got)
+	}
+	if got := send("alice", "9.9.9.9:5000"); got != http.StatusTooManyRequests {
+		t.Errorf("same client from another IP: status = %d, want 429", got)
+	}
+	if got := send("bob", "1.1.1.1:5000"); got != http.StatusOK {
+		t.Errorf("different client on the same IP: status = %d, want 200", got)
 	}
 }

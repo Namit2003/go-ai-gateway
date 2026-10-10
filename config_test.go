@@ -19,6 +19,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_PER_SECOND", "")
 	t.Setenv("RATE_LIMIT_BURST", "")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "")
+	t.Setenv("API_KEYS_FILE", "")
 
 	cfg := LoadConfig()
 
@@ -55,6 +56,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.MaxConcurrent != 100 {
 		t.Errorf("MaxConcurrent = %d, want 100", cfg.MaxConcurrent)
 	}
+	if cfg.APIKeysFile != "keys.json" {
+		t.Errorf("APIKeysFile = %q, want keys.json", cfg.APIKeysFile)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -71,6 +75,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("RATE_LIMIT_PER_SECOND", "50")
 	t.Setenv("RATE_LIMIT_BURST", "100")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "7")
+	t.Setenv("API_KEYS_FILE", "/etc/gw/keys.json")
 
 	cfg := LoadConfig()
 
@@ -112,6 +117,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.MaxConcurrent != 7 {
 		t.Errorf("MaxConcurrent = %d, want 7", cfg.MaxConcurrent)
+	}
+	if cfg.APIKeysFile != "/etc/gw/keys.json" {
+		t.Errorf("APIKeysFile = %q, want /etc/gw/keys.json", cfg.APIKeysFile)
 	}
 }
 

@@ -20,6 +20,7 @@ type Config struct {
 	RateLimit        int
 	RateBurst        int
 	MaxConcurrent    int
+	APIKeysFile      string
 }
 
 func LoadConfig() Config {
@@ -68,6 +69,11 @@ func LoadConfig() Config {
 		maxConcurrent = n
 	}
 
+	apiKeysFile := os.Getenv("API_KEYS_FILE")
+	if apiKeysFile == "" {
+		apiKeysFile = "keys.json"
+	}
+
 	return Config{
 		Port:             port,
 		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
@@ -82,5 +88,6 @@ func LoadConfig() Config {
 		RateLimit:        rateLimit,
 		RateBurst:        rateBurst,
 		MaxConcurrent:    maxConcurrent,
+		APIKeysFile:      apiKeysFile,
 	}
 }

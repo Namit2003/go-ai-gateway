@@ -87,6 +87,14 @@ func writeProviderError(w http.ResponseWriter, err error) {
 
 func main() {
 	cfg := LoadConfig()
+	if len(os.Args) == 3 && os.Args[1] == "newkey" {
+		key, err := newKey(cfg.APIKeysFile, os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("key for %s (shown only once): %s\n", os.Args[2], key)
+		return
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	maxAttempts = cfg.MaxAttempts
@@ -100,7 +108,14 @@ func main() {
 		}
 	}
 
-	limiter := NewIPRateLimiter(ctx, rate.Limit(cfg.RateLimit), cfg.RateBurst)
+	keys, err := LoadAPIKeys(cfg.APIKeysFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(keys) == 0 {
+		log.Printf("warning: no API keys in %s, all requests will be rejected (create one with: make newkey NAME=<name>)", cfg.APIKeysFile)
+	}
+	limiter := NewClientRateLimiter(ctx, rate.Limit(cfg.RateLimit), cfg.RateBurst)
 
 	mux := http.NewServeMux()
 
@@ -109,7 +124,7 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.Handle("POST /v1/chat/completions", rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, chatCompletionsHandler(provider))))
+	mux.Handle("POST /v1/chat/completions", requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, chatCompletionsHandler(provider)))))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 
