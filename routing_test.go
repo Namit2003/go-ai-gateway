@@ -67,7 +67,7 @@ func TestRouterPick(t *testing.T) {
 		{Rule{Model: "qwen*", Provider: "local"}, local},
 		{Rule{Model: "auto", When: When{Contains: "```"}, Provider: "local", UseModel: "qwen-coder"}, local},
 		{Rule{Model: "auto", When: When{MaxChars: 20}, Provider: "local", UseModel: "qwen-small"}, local},
-		{Rule{Model: "auto", Provider: "default", UseModel: "big"}, def},
+		{Rule{Model: "auto", Provider: "openai", UseModel: "big"}, def},
 	}}
 
 	tests := []struct {
@@ -156,12 +156,23 @@ func TestLoadRouter(t *testing.T) {
 		}
 	})
 
+	t.Run("no default in file keeps the env provider", func(t *testing.T) {
+		r, err := LoadRouter(write(`{"providers": {"local": {"base_url": "http://x"}}, "routes": []}`), def, Config{})
+		if err != nil || r.Default != Provider(def) {
+			t.Errorf("Default = %#v, err = %v, want the env provider", r.Default, err)
+		}
+	})
+
 	t.Run("valid file", func(t *testing.T) {
 		path := write(`{
-			"providers": {"local": {"base_url": "http://localhost:8000/v1"}},
+			"default": "openai",
+			"providers": {
+				"openai": {"base_url": "https://api.openai.com/v1"},
+				"local": {"base_url": "http://localhost:8000/v1"}
+			},
 			"routes": [
 				{"model": "qwen*", "provider": "local"},
-				{"model": "auto", "provider": "default", "use_model": "gpt-4o-mini"}
+				{"model": "auto", "provider": "openai", "use_model": "gpt-4o-mini"}
 			]}`)
 		r, err := LoadRouter(path, def, Config{BreakerThreshold: 1})
 		if err != nil {
@@ -173,18 +184,18 @@ func TestLoadRouter(t *testing.T) {
 		if o, ok := r.routes[0].provider.(OpenAI); !ok || o.BaseURL != "http://localhost:8000/v1" {
 			t.Errorf("route 1 provider = %#v, want the local OpenAI provider", r.routes[0].provider)
 		}
-		if r.routes[1].provider != Provider(def) {
-			t.Error("route 2 should use the default provider")
+		if o, ok := r.Default.(OpenAI); !ok || o.BaseURL != "https://api.openai.com/v1" {
+			t.Errorf("Default = %#v, want the openai provider from the file", r.Default)
 		}
 	})
 
 	bad := map[string]string{
 		"invalid JSON":           `nope`,
 		"unknown provider":       `{"routes": [{"model": "x", "provider": "ghost"}]}`,
-		"missing model":          `{"routes": [{"provider": "default"}]}`,
-		"auto without use_model": `{"routes": [{"model": "auto", "provider": "default"}]}`,
+		"missing model":          `{"routes": [{"provider": "openai"}]}`,
+		"auto without use_model": `{"routes": [{"model": "auto", "provider": "openai"}]}`,
 		"provider without url":   `{"providers": {"local": {}}, "routes": []}`,
-		"reserved provider name": `{"providers": {"default": {"base_url": "http://x"}}, "routes": []}`,
+		"unknown default":        `{"default": "ghost", "routes": []}`,
 	}
 	for name, content := range bad {
 		t.Run(name, func(t *testing.T) {

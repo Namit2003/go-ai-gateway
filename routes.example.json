@@ -1,5 +1,7 @@
 {
+  "default": "local",
   "providers": {
+    "openai": {"base_url": "https://api.openai.com/v1", "api_key_env": "OPENAI_API_KEY"},
     "local": {"base_url": "http://localhost:8000/v1", "api_key_env": "LOCAL_API_KEY"},
     "anthropic": {"base_url": "https://api.anthropic.com/v1", "api_key_env": "ANTHROPIC_API_KEY"},
     "google": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "api_key_env": "GEMINI_API_KEY"}
@@ -8,16 +10,16 @@
     {"model": "claude*", "provider": "anthropic"},
     {"model": "gemini*", "provider": "google"},
     {"model": "qwen*", "provider": "local"},
-    {"model": "gpt*", "provider": "default"},
-    {"model": "o1*", "provider": "default"},
-    {"model": "o3*", "provider": "default"},
-    {"model": "o4*", "provider": "default"},
+    {"model": "gpt*", "provider": "openai"},
+    {"model": "o1*", "provider": "openai"},
+    {"model": "o3*", "provider": "openai"},
+    {"model": "o4*", "provider": "openai"},
 
     {"model": "auto", "when": {"contains": "```", "min_chars": 4000}, "provider": "anthropic", "use_model": "claude-opus-5-5"},
     {"model": "auto", "when": {"contains": "```"}, "provider": "anthropic", "use_model": "claude-sonnet-5-5"},
     {"model": "auto", "when": {"contains": "Traceback"}, "provider": "anthropic", "use_model": "claude-sonnet-5-5"},
-    {"model": "auto", "when": {"contains": "prove that"}, "provider": "default", "use_model": "gpt-6.1-sol"},
-    {"model": "auto", "when": {"contains": "Prove that"}, "provider": "default", "use_model": "gpt-6.1-sol"},
+    {"model": "auto", "when": {"contains": "prove that"}, "provider": "openai", "use_model": "gpt-6.1-sol"},
+    {"model": "auto", "when": {"contains": "Prove that"}, "provider": "openai", "use_model": "gpt-6.1-sol"},
     {"model": "auto", "when": {"min_chars": 20000}, "provider": "google", "use_model": "gemini-3.8-flash"},
     {"model": "auto", "when": {"max_chars": 200}, "provider": "local", "use_model": "Qwen3.5-9B-MLX-4bit"},
     {"model": "auto", "when": {"max_chars": 1500}, "provider": "anthropic", "use_model": "claude-haiku-5-5"},

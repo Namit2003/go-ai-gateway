@@ -35,6 +35,7 @@ type providerConfig struct {
 }
 
 type routesFile struct {
+	Default   string                    `json:"default"`
 	Providers map[string]providerConfig `json:"providers"`
 	Routes    []Rule                    `json:"routes"`
 }
@@ -126,11 +127,8 @@ func LoadRouter(path string, def Provider, cfg Config) (*Router, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
-	providers := map[string]Provider{"default": def}
+	providers := make(map[string]Provider)
 	for name, pc := range file.Providers {
-		if name == "default" {
-			return nil, fmt.Errorf("%s: provider name %q is reserved", path, name)
-		}
 		if pc.BaseURL == "" {
 			return nil, fmt.Errorf("%s: provider %q needs a base_url", path, name)
 		}
@@ -139,6 +137,14 @@ func LoadRouter(path string, def Provider, cfg Config) (*Router, error) {
 			BaseURL: pc.BaseURL,
 			Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown),
 		}
+	}
+
+	if file.Default != "" {
+		p, ok := providers[file.Default]
+		if !ok {
+			return nil, fmt.Errorf("%s: default uses unknown provider %q", path, file.Default)
+		}
+		router.Default = p
 	}
 
 	for i, rule := range file.Routes {
