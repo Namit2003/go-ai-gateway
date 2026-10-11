@@ -17,7 +17,7 @@ func (e *UpstreamError) Error() string {
 }
 
 func upstreamFailed(ctx context.Context, err error) bool {
-	if err == nil || ctx.Err() != nil {
+	if err == nil || ctx.Err() != nil || errors.Is(err, ErrNoRoute) {
 		return false
 	}
 	var upErr *UpstreamError

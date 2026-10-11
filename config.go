@@ -22,6 +22,7 @@ type Config struct {
 	MaxConcurrent    int
 	APIKeysFile      string
 	DailyQuota       int
+	RoutesFile       string
 }
 
 func LoadConfig() Config {
@@ -80,6 +81,11 @@ func LoadConfig() Config {
 		dailyQuota = n
 	}
 
+	routesFile := os.Getenv("ROUTES_FILE")
+	if routesFile == "" {
+		routesFile = "routes.json"
+	}
+
 	return Config{
 		Port:             port,
 		OpenAIKey:        os.Getenv("OPENAI_API_KEY"),
@@ -96,5 +102,6 @@ func LoadConfig() Config {
 		MaxConcurrent:    maxConcurrent,
 		APIKeysFile:      apiKeysFile,
 		DailyQuota:       dailyQuota,
+		RoutesFile:       routesFile,
 	}
 }

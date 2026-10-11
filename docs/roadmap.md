@@ -34,7 +34,7 @@
 
 ## Phase 5 — Routing
 
-- [ ] configurable routing rules
+- [x] configurable routing rules
 - [ ] latency-aware routing
 - [ ] cost-aware routing
 
@@ -54,3 +54,8 @@
 - [ ] benchmarks
 - [ ] profiling
 - [ ] failure injection
+
+## Phase 8 — Later
+
+- [ ] native Anthropic provider (/v1/messages)
+- [ ] token-based quota

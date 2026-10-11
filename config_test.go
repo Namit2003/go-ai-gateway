@@ -21,6 +21,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "")
 	t.Setenv("API_KEYS_FILE", "")
 	t.Setenv("QUOTA_REQUESTS_PER_DAY", "")
+	t.Setenv("ROUTES_FILE", "")
 
 	cfg := LoadConfig()
 
@@ -63,6 +64,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.DailyQuota != 1000 {
 		t.Errorf("DailyQuota = %d, want 1000", cfg.DailyQuota)
 	}
+	if cfg.RoutesFile != "routes.json" {
+		t.Errorf("RoutesFile = %q, want routes.json", cfg.RoutesFile)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -81,6 +85,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "7")
 	t.Setenv("API_KEYS_FILE", "/etc/gw/keys.json")
 	t.Setenv("QUOTA_REQUESTS_PER_DAY", "250")
+	t.Setenv("ROUTES_FILE", "/etc/gw/routes.json")
 
 	cfg := LoadConfig()
 
@@ -128,6 +133,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.DailyQuota != 250 {
 		t.Errorf("DailyQuota = %d, want 250", cfg.DailyQuota)
+	}
+	if cfg.RoutesFile != "/etc/gw/routes.json" {
+		t.Errorf("RoutesFile = %q, want /etc/gw/routes.json", cfg.RoutesFile)
 	}
 }
 

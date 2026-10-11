@@ -63,6 +63,7 @@ func TestChatCompletionsHandler(t *testing.T) {
 		{"missing model", `{"messages":[{"role":"user","content":"hi"}]}`, fakeProvider{}, http.StatusBadRequest, "model is required"},
 		{"empty messages", `{"model":"m","messages":[]}`, fakeProvider{}, http.StatusBadRequest, "messages is required"},
 		{"upstream rate limited", validBody, fakeProvider{err: &UpstreamError{StatusCode: 429}}, http.StatusTooManyRequests, "rate_limit_error"},
+		{"no route", validBody, fakeProvider{err: ErrNoRoute}, http.StatusBadRequest, "no route matches"},
 		{"circuit open", validBody, fakeProvider{err: ErrCircuitOpen}, http.StatusServiceUnavailable, "temporarily unavailable"},
 		{"upstream failure", validBody, fakeProvider{err: errors.New("boom")}, http.StatusBadGateway, "upstream_error"},
 		{

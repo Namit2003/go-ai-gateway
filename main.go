@@ -77,6 +77,10 @@ func writeProviderError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusServiceUnavailable, "upstream_error", "upstream temporarily unavailable")
 		return
 	}
+	if errors.Is(err, ErrNoRoute) {
+		writeError(w, http.StatusBadRequest, "invalid_request_error", "no route matches this request")
+		return
+	}
 	var upErr *UpstreamError
 	if errors.As(err, &upErr) && upErr.StatusCode == http.StatusTooManyRequests {
 		writeError(w, http.StatusTooManyRequests, "rate_limit_error", "upstream rate limit exceeded")
@@ -100,6 +104,11 @@ func main() {
 	maxAttempts = cfg.MaxAttempts
 	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
 	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)}
+	router, err := LoadRouter(cfg.RoutesFile, provider, cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	provider = router
 	if cfg.FallbackBaseURL != "" {
 		provider = FallbackProvider{
 			Primary:       provider,
