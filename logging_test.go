@@ -67,3 +67,19 @@ func TestStatusRecorderFlush(t *testing.T) {
 		t.Error("Flush did not reach the underlying writer")
 	}
 }
+
+func TestLogRequestsFallback(t *testing.T) {
+	buf := captureLogs(t)
+	primary := &Router{Default: &recordingProvider{err: &UpstreamError{StatusCode: http.StatusServiceUnavailable}}, DefaultName: "default"}
+	h := logRequests(chatCompletionsHandler(FallbackProvider{Primary: primary, Fallback: &recordingProvider{}, FallbackModel: "qwen"}))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(`{"model":"gpt-4o","messages":[{"role":"user","content":"hi"}]}`))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	var line map[string]any
+	json.Unmarshal([]byte(lines[len(lines)-1]), &line)
+	if line["provider"] != "fallback" || line["upstream_model"] != "qwen" || line["model"] != "gpt-4o" {
+		t.Errorf("log = %v, want provider fallback, upstream_model qwen, model gpt-4o", line)
+	}
+}

@@ -20,6 +20,8 @@ func (f FallbackProvider) ChatCompletion(ctx context.Context, req ChatCompletion
 	if f.FallbackModel != "" {
 		req.Model = f.FallbackModel
 	}
+	info := requestInfoFrom(ctx)
+	info.Provider, info.UpstreamModel = "fallback", req.Model
 	return f.Fallback.ChatCompletion(ctx, req)
 }
 
@@ -32,5 +34,7 @@ func (f FallbackProvider) ChatCompletionStream(ctx context.Context, req ChatComp
 	if f.FallbackModel != "" {
 		req.Model = f.FallbackModel
 	}
+	info := requestInfoFrom(ctx)
+	info.Provider, info.UpstreamModel = "fallback", req.Model
 	return f.Fallback.ChatCompletionStream(ctx, req)
 }
