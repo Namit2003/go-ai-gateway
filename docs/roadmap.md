@@ -43,7 +43,7 @@
 ## Phase 6 — Observability
 
 - [ ] OpenTelemetry
-- [ ] Prometheus
+- [x] Prometheus
 - [x] structured logging
 
 

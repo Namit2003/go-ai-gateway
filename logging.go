@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -43,12 +44,15 @@ func logRequests(next http.Handler) http.Handler {
 		info := &requestInfo{}
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r.WithContext(context.WithValue(r.Context(), requestInfoKey{}, info)))
+		elapsed := time.Since(start)
+		requestsTotal.WithLabelValues(info.Provider, info.UpstreamModel, strconv.Itoa(rec.status)).Inc()
+		requestDuration.WithLabelValues(info.Provider).Observe(elapsed.Seconds())
 		slog.Info("request",
 			"client", info.Client,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
-			"duration_ms", time.Since(start).Milliseconds(),
+			"duration_ms", elapsed.Milliseconds(),
 			"model", info.Model,
 			"upstream_model", info.UpstreamModel,
 			"provider", info.Provider,

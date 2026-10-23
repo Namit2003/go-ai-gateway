@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
 )
 
@@ -134,6 +135,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+
+	mux.Handle("GET /metrics", promhttp.Handler())
 
 	mux.Handle("POST /v1/chat/completions", logRequests(requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, quota(NewQuotaTracker(cfg.DailyQuota), chatCompletionsHandler(provider)))))))
 
