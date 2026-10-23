@@ -44,7 +44,7 @@
 
 - [ ] OpenTelemetry
 - [ ] Prometheus
-- [ ] structured logging
+- [x] structured logging
 
 
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -46,8 +45,9 @@ type route struct {
 }
 
 type Router struct {
-	Default Provider
-	routes  []route
+	Default     Provider
+	DefaultName string
+	routes      []route
 }
 
 func matchModel(pattern, model string) bool {
@@ -78,27 +78,29 @@ func (r Rule) matches(req ChatCompletionRequest) bool {
 	return r.When.Contains == "" || hasText
 }
 
-func (r *Router) pick(req ChatCompletionRequest) (Provider, ChatCompletionRequest, error) {
+func (r *Router) pick(ctx context.Context, req ChatCompletionRequest) (Provider, ChatCompletionRequest, error) {
+	info := requestInfoFrom(ctx)
+	info.Model, info.UpstreamModel = req.Model, req.Model
 	for _, rt := range r.routes {
 		if !rt.rule.matches(req) {
 			continue
 		}
+		info.Provider = rt.rule.Provider
 		if rt.rule.UseModel != "" {
 			req.Model = rt.rule.UseModel
-		}
-		if rt.rule.Model == autoModel {
-			log.Printf("auto routed to provider %q, model %q", rt.rule.Provider, req.Model)
+			info.UpstreamModel = req.Model
 		}
 		return rt.provider, req, nil
 	}
 	if req.Model == autoModel {
 		return nil, req, ErrNoRoute
 	}
+	info.Provider = r.DefaultName
 	return r.Default, req, nil
 }
 
 func (r *Router) ChatCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
-	p, req, err := r.pick(req)
+	p, req, err := r.pick(ctx, req)
 	if err != nil {
 		return ChatCompletionResponse{}, err
 	}
@@ -106,7 +108,7 @@ func (r *Router) ChatCompletion(ctx context.Context, req ChatCompletionRequest) 
 }
 
 func (r *Router) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (Stream, error) {
-	p, req, err := r.pick(req)
+	p, req, err := r.pick(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +116,7 @@ func (r *Router) ChatCompletionStream(ctx context.Context, req ChatCompletionReq
 }
 
 func LoadRouter(path string, def Provider, cfg Config) (*Router, error) {
-	router := &Router{Default: def}
+	router := &Router{Default: def, DefaultName: "default"}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return router, nil
@@ -145,6 +147,7 @@ func LoadRouter(path string, def Provider, cfg Config) (*Router, error) {
 			return nil, fmt.Errorf("%s: default uses unknown provider %q", path, file.Default)
 		}
 		router.Default = p
+		router.DefaultName = file.Default
 	}
 
 	for i, rule := range file.Routes {

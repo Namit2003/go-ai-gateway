@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -90,6 +91,7 @@ func writeProviderError(w http.ResponseWriter, err error) {
 }
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 	cfg := LoadConfig()
 	if len(os.Args) == 3 && os.Args[1] == "newkey" {
 		key, err := newKey(cfg.APIKeysFile, os.Args[2])
@@ -133,7 +135,7 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.Handle("POST /v1/chat/completions", requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, quota(NewQuotaTracker(cfg.DailyQuota), chatCompletionsHandler(provider))))))
+	mux.Handle("POST /v1/chat/completions", logRequests(requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, quota(NewQuotaTracker(cfg.DailyQuota), chatCompletionsHandler(provider)))))))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 

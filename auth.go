@@ -90,6 +90,7 @@ func requireAPIKey(keys map[string]string, next http.Handler) http.Handler {
 			writeError(w, http.StatusUnauthorized, "invalid_request_error", "invalid API key")
 			return
 		}
+		requestInfoFrom(r.Context()).Client = name
 		ctx := context.WithValue(r.Context(), clientKey{}, name)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
