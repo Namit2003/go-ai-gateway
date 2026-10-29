@@ -42,7 +42,6 @@
 
 ## Phase 6 — Observability
 
-- [ ] OpenTelemetry
 - [x] Prometheus
 - [x] structured logging
 
@@ -50,7 +49,7 @@
 
 ## Phase 7 — Performance
 
-- [ ] load generator
+- [x] load generator
 - [ ] benchmarks
 - [ ] profiling
 - [ ] failure injection
@@ -59,3 +58,4 @@
 
 - [ ] native Anthropic provider (/v1/messages)
 - [ ] token-based quota
+- [ ] OpenTelemetry
