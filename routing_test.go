@@ -205,3 +205,24 @@ func TestLoadRouter(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkRouterPick(b *testing.B) {
+	r, err := LoadRouter("routes.example.json", &recordingProvider{}, Config{})
+	if err != nil {
+		b.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name string
+		text string
+	}{
+		{"short prompt", "hi"},
+		{"long prompt", strings.Repeat("a", 20000)},
+	} {
+		b.Run(tt.name, func(b *testing.B) {
+			req := ChatCompletionRequest{Model: "auto", Messages: userMsg(tt.text)}
+			for b.Loop() {
+				r.pick(context.Background(), req)
+			}
+		})
+	}
+}

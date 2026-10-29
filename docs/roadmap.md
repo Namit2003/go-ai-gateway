@@ -50,7 +50,7 @@
 ## Phase 7 — Performance
 
 - [x] load generator
-- [ ] benchmarks
+- [x] benchmarks
 - [ ] profiling
 - [ ] failure injection
 

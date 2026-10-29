@@ -120,3 +120,14 @@ func TestNewKey(t *testing.T) {
 		t.Error("empty name: want an error")
 	}
 }
+
+func BenchmarkRequireAPIKey(b *testing.B) {
+	keys := map[string]string{hashKey("sk-good"): "alice"}
+	h := requireAPIKey(keys, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("Authorization", "Bearer sk-good")
+	rec := httptest.NewRecorder()
+	for b.Loop() {
+		h.ServeHTTP(rec, req)
+	}
+}

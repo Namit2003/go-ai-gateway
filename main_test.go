@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"golang.org/x/time/rate"
 )
 
 type fakeProvider struct {
@@ -163,5 +165,23 @@ func TestChatCompletionsHandlerStreamError(t *testing.T) {
 				t.Errorf("body = %q, want no [DONE] after a failed stream", rec.Body.String())
 			}
 		})
+	}
+}
+
+func BenchmarkRequestChain(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	keys := map[string]string{hashKey("sk-good"): "alice"}
+	provider := &recordingProvider{resp: ChatCompletionResponse{ID: "x"}}
+	h := requireAPIKey(keys, rateLimit(NewClientRateLimiter(ctx, rate.Inf, 1), limitConcurrency(100, quota(NewQuotaTracker(1<<30), chatCompletionsHandler(provider)))))
+
+	const body = `{"model":"gpt-4o","messages":[{"role":"user","content":"hi"}]}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.Header.Set("Authorization", "Bearer sk-good")
+	rec := httptest.NewRecorder()
+	for b.Loop() {
+		req.Body = io.NopCloser(strings.NewReader(body))
+		rec.Body.Reset()
+		h.ServeHTTP(rec, req)
 	}
 }
