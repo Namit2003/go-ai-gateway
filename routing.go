@@ -57,14 +57,20 @@ func matchModel(pattern, model string) bool {
 	return pattern == model
 }
 
-func (r Rule) matches(req ChatCompletionRequest) bool {
+func countChars(messages []Message) int {
+	chars := 0
+	for _, m := range messages {
+		chars += utf8.RuneCountInString(m.Content)
+	}
+	return chars
+}
+
+func (r Rule) matches(req ChatCompletionRequest, chars int) bool {
 	if !matchModel(r.Model, req.Model) {
 		return false
 	}
-	chars := 0
 	hasText := false
 	for _, m := range req.Messages {
-		chars += utf8.RuneCountInString(m.Content)
 		if r.When.Contains != "" && strings.Contains(m.Content, r.When.Contains) {
 			hasText = true
 		}
@@ -81,8 +87,9 @@ func (r Rule) matches(req ChatCompletionRequest) bool {
 func (r *Router) pick(ctx context.Context, req ChatCompletionRequest) (Provider, ChatCompletionRequest, error) {
 	info := requestInfoFrom(ctx)
 	info.Model, info.UpstreamModel = req.Model, req.Model
+	chars := countChars(req.Messages)
 	for _, rt := range r.routes {
-		if !rt.rule.matches(req) {
+		if !rt.rule.matches(req, chars) {
 			continue
 		}
 		info.Provider = rt.rule.Provider

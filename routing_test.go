@@ -52,7 +52,8 @@ func TestRuleMatchesWhen(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rule := Rule{Model: "auto", When: tt.when}
-			got := rule.matches(ChatCompletionRequest{Model: "auto", Messages: userMsg(tt.text)})
+			msgs := userMsg(tt.text)
+			got := rule.matches(ChatCompletionRequest{Model: "auto", Messages: msgs}, countChars(msgs))
 			if got != tt.want {
 				t.Errorf("matches = %v, want %v", got, tt.want)
 			}
