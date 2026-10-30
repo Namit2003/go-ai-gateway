@@ -87,3 +87,20 @@ func TestQuotaCountsResponseTokens(t *testing.T) {
 		t.Error("150 tokens used against a limit of 100, should be rejected")
 	}
 }
+
+func TestQuotaCountsStreamTokens(t *testing.T) {
+	q := NewQuotaTracker(100)
+	chunks := []ChatCompletionChunk{
+		{Choices: []ChunkChoice{{Delta: Delta{Content: "hi"}}}},
+		{Usage: &Usage{TotalTokens: 150}},
+	}
+	h := logRequests(quota(q, chatCompletionsHandler(fakeProvider{chunks: chunks})))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(`{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`))
+	req = req.WithContext(context.WithValue(req.Context(), clientKey{}, "alice"))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	if q.Allow("alice") {
+		t.Error("150 streamed tokens used against a limit of 100, should be rejected")
+	}
+}

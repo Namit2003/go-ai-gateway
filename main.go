@@ -35,6 +35,7 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 			return
 		}
 		if req.Stream {
+			req.StreamOptions = &StreamOptions{IncludeUsage: true}
 			stream, err := provider.ChatCompletionStream(r.Context(), req)
 			if err != nil {
 				writeProviderError(w, err)
@@ -58,6 +59,9 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 						log.Printf("stream failed: %v", err)
 					}
 					return
+				}
+				if chunk.Usage != nil {
+					requestInfoFrom(r.Context()).Tokens = chunk.Usage.TotalTokens
 				}
 				data, _ := json.Marshal(chunk)
 				fmt.Fprintf(w, "data: %s\n\n", data)

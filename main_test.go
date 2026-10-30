@@ -51,6 +51,28 @@ func (f fakeProvider) ChatCompletionStream(ctx context.Context, req ChatCompleti
 	return &fakeStream{chunks: f.chunks, err: f.streamErr}, nil
 }
 
+type capturingProvider struct {
+	fakeProvider
+	got ChatCompletionRequest
+}
+
+func (c *capturingProvider) ChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (Stream, error) {
+	c.got = req
+	return c.fakeProvider.ChatCompletionStream(ctx, req)
+}
+
+func TestChatCompletionsHandlerStreamAsksForUsage(t *testing.T) {
+	provider := &capturingProvider{}
+	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"stream":true}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
+
+	chatCompletionsHandler(provider)(httptest.NewRecorder(), req)
+
+	if provider.got.StreamOptions == nil || !provider.got.StreamOptions.IncludeUsage {
+		t.Errorf("StreamOptions = %+v, want include_usage true", provider.got.StreamOptions)
+	}
+}
+
 func TestChatCompletionsHandler(t *testing.T) {
 	validBody := `{"model":"m","messages":[{"role":"user","content":"hi"}]}`
 
