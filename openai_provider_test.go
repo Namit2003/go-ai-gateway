@@ -153,7 +153,7 @@ func TestOpenAIChatCompletionStream(t *testing.T) {
 func TestOpenAIChatCompletionHeaderTimeout(t *testing.T) {
 	old := upstreamClient
 	t.Cleanup(func() { upstreamClient = old })
-	upstreamClient = newUpstreamClient(50 * time.Millisecond)
+	upstreamClient = newUpstreamClient(50*time.Millisecond, 100)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(300 * time.Millisecond)
@@ -273,7 +273,7 @@ func TestUpstreamClientReusesConnections(t *testing.T) {
 	}
 	srv.Start()
 	defer srv.Close()
-	client := newUpstreamClient(time.Second)
+	client := newUpstreamClient(time.Second, 100)
 
 	burst := func() {
 		var wg sync.WaitGroup

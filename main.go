@@ -106,7 +106,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	maxAttempts = cfg.MaxAttempts
-	upstreamClient = newUpstreamClient(cfg.HeaderTimeout)
+	upstreamClient = newUpstreamClient(cfg.HeaderTimeout, cfg.MaxConcurrent)
 	var provider Provider = OpenAI{APIKey: cfg.OpenAIKey, BaseURL: cfg.OpenAIBaseURL, Breaker: NewCircuitBreaker(cfg.BreakerThreshold, cfg.BreakerCooldown)}
 	router, err := LoadRouter(cfg.RoutesFile, provider, cfg)
 	if err != nil {

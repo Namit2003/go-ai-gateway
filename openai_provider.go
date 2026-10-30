@@ -16,12 +16,12 @@ const retryBaseDelay = 100 * time.Millisecond
 
 var maxAttempts = 3
 
-var upstreamClient = newUpstreamClient(60 * time.Second)
+var upstreamClient = newUpstreamClient(60*time.Second, 100)
 
-func newUpstreamClient(headerTimeout time.Duration) *http.Client {
+func newUpstreamClient(headerTimeout time.Duration, maxIdleConns int) *http.Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.ResponseHeaderTimeout = headerTimeout
-	t.MaxIdleConnsPerHost = 100
+	t.MaxIdleConnsPerHost = maxIdleConns
 	return &http.Client{Transport: t}
 }
 
