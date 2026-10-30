@@ -41,11 +41,11 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.HeaderTimeout != 60*time.Second {
 		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
 	}
-	if cfg.BreakerThreshold != 5 {
-		t.Errorf("BreakerThreshold = %d, want 5", cfg.BreakerThreshold)
+	if cfg.BreakerThreshold != 20 {
+		t.Errorf("BreakerThreshold = %d, want 20", cfg.BreakerThreshold)
 	}
-	if cfg.BreakerCooldown != 30*time.Second {
-		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
+	if cfg.BreakerCooldown != 10*time.Second {
+		t.Errorf("BreakerCooldown = %v, want 10s", cfg.BreakerCooldown)
 	}
 	if cfg.FallbackBaseURL != "" || cfg.FallbackAPIKey != "" || cfg.FallbackModel != "" {
 		t.Errorf("fallback = %q %q %q, want all empty", cfg.FallbackBaseURL, cfg.FallbackAPIKey, cfg.FallbackModel)
@@ -165,11 +165,11 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	if cfg.HeaderTimeout != 60*time.Second {
 		t.Errorf("HeaderTimeout = %v, want 60s", cfg.HeaderTimeout)
 	}
-	if cfg.BreakerThreshold != 5 {
-		t.Errorf("BreakerThreshold = %d, want 5", cfg.BreakerThreshold)
+	if cfg.BreakerThreshold != 20 {
+		t.Errorf("BreakerThreshold = %d, want 20", cfg.BreakerThreshold)
 	}
-	if cfg.BreakerCooldown != 30*time.Second {
-		t.Errorf("BreakerCooldown = %v, want 30s", cfg.BreakerCooldown)
+	if cfg.BreakerCooldown != 10*time.Second {
+		t.Errorf("BreakerCooldown = %v, want 10s", cfg.BreakerCooldown)
 	}
 	if cfg.RateLimit != 10 {
 		t.Errorf("RateLimit = %d, want 10", cfg.RateLimit)

@@ -47,12 +47,12 @@ func LoadConfig() Config {
 		headerTimeout = time.Duration(n) * time.Second
 	}
 
-	breakerThreshold := 5
+	breakerThreshold := 20
 	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_BREAKER_THRESHOLD")); err == nil && n > 0 {
 		breakerThreshold = n
 	}
 
-	breakerCooldown := 30 * time.Second
+	breakerCooldown := 10 * time.Second
 	if n, err := strconv.Atoi(os.Getenv("UPSTREAM_BREAKER_COOLDOWN_SECONDS")); err == nil && n > 0 {
 		breakerCooldown = time.Duration(n) * time.Second
 	}
