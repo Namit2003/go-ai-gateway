@@ -11,14 +11,15 @@ import (
 
 func TestQuotaTrackerAllow(t *testing.T) {
 	now := time.Date(2026, 10, 9, 15, 0, 0, 0, time.UTC)
-	q := NewQuotaTracker(2)
+	q := NewQuotaTracker(100)
 	q.now = func() time.Time { return now }
 
-	if !q.Allow("alice") || !q.Allow("alice") {
-		t.Fatal("first 2 requests should be allowed")
+	if !q.Allow("alice") {
+		t.Fatal("a client with no usage should be allowed")
 	}
+	q.Add("alice", 100)
 	if q.Allow("alice") {
-		t.Error("3rd request should be rejected")
+		t.Error("a client at the limit should be rejected")
 	}
 	if !q.Allow("bob") {
 		t.Error("a different client should have its own quota")
@@ -35,7 +36,7 @@ func TestQuotaTrackerSameDayDoesNotReset(t *testing.T) {
 	q := NewQuotaTracker(1)
 	q.now = func() time.Time { return now }
 
-	q.Allow("alice")
+	q.Add("alice", 1)
 	now = now.Add(23 * time.Hour)
 	if q.Allow("alice") {
 		t.Error("still the same UTC day, should be rejected")
@@ -43,14 +44,16 @@ func TestQuotaTrackerSameDayDoesNotReset(t *testing.T) {
 }
 
 func TestQuotaMiddleware(t *testing.T) {
-	q := NewQuotaTracker(1)
+	q := NewQuotaTracker(10)
 	h := quota(q, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestInfoFrom(r.Context()).Tokens = 10
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	send := func(client string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-		req = req.WithContext(context.WithValue(req.Context(), clientKey{}, client))
+		ctx := context.WithValue(req.Context(), clientKey{}, client)
+		req = req.WithContext(context.WithValue(ctx, requestInfoKey{}, &requestInfo{}))
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
 		return rec
@@ -68,5 +71,19 @@ func TestQuotaMiddleware(t *testing.T) {
 	}
 	if rec := send("bob"); rec.Code != http.StatusOK {
 		t.Errorf("different client: status = %d, want 200", rec.Code)
+	}
+}
+
+func TestQuotaCountsResponseTokens(t *testing.T) {
+	q := NewQuotaTracker(100)
+	provider := &recordingProvider{resp: ChatCompletionResponse{Usage: &Usage{TotalTokens: 150}}}
+	h := logRequests(quota(q, chatCompletionsHandler(provider)))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(`{"model":"m","messages":[{"role":"user","content":"hi"}]}`))
+	req = req.WithContext(context.WithValue(req.Context(), clientKey{}, "alice"))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	if q.Allow("alice") {
+		t.Error("150 tokens used against a limit of 100, should be rejected")
 	}
 }

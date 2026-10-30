@@ -69,6 +69,9 @@ func chatCompletionsHandler(provider Provider) http.HandlerFunc {
 			writeProviderError(w, err)
 			return
 		}
+		if resp.Usage != nil {
+			requestInfoFrom(r.Context()).Tokens = resp.Usage.TotalTokens
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}

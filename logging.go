@@ -15,6 +15,7 @@ type requestInfo struct {
 	Model         string
 	UpstreamModel string
 	Provider      string
+	Tokens        int
 }
 
 func requestInfoFrom(ctx context.Context) *requestInfo {

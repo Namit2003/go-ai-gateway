@@ -31,11 +31,19 @@ func (q *QuotaTracker) Allow(name string) bool {
 		u = &quotaUsage{day: day}
 		q.usage[name] = u
 	}
-	if u.count >= q.limit {
-		return false
+	return u.count < q.limit
+}
+
+func (q *QuotaTracker) Add(name string, tokens int) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	day := q.now().UTC().Truncate(24 * time.Hour)
+	u := q.usage[name]
+	if u == nil || !u.day.Equal(day) {
+		u = &quotaUsage{day: day}
+		q.usage[name] = u
 	}
-	u.count++
-	return true
+	u.count += tokens
 }
 
 func quota(q *QuotaTracker, next http.Handler) http.Handler {
@@ -46,5 +54,6 @@ func quota(q *QuotaTracker, next http.Handler) http.Handler {
 			return
 		}
 		next.ServeHTTP(w, r)
+		q.Add(name, requestInfoFrom(r.Context()).Tokens)
 	})
 }

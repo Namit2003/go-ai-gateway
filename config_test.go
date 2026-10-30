@@ -20,7 +20,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_BURST", "")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "")
 	t.Setenv("API_KEYS_FILE", "")
-	t.Setenv("QUOTA_REQUESTS_PER_DAY", "")
+	t.Setenv("QUOTA_TOKENS_PER_DAY", "")
 	t.Setenv("ROUTES_FILE", "")
 	t.Setenv("PPROF_ADDR", "")
 
@@ -62,8 +62,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.APIKeysFile != "keys.json" {
 		t.Errorf("APIKeysFile = %q, want keys.json", cfg.APIKeysFile)
 	}
-	if cfg.DailyQuota != 1000 {
-		t.Errorf("DailyQuota = %d, want 1000", cfg.DailyQuota)
+	if cfg.DailyQuota != 100000 {
+		t.Errorf("DailyQuota = %d, want 100000", cfg.DailyQuota)
 	}
 	if cfg.RoutesFile != "routes.json" {
 		t.Errorf("RoutesFile = %q, want routes.json", cfg.RoutesFile)
@@ -88,7 +88,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("RATE_LIMIT_BURST", "100")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "7")
 	t.Setenv("API_KEYS_FILE", "/etc/gw/keys.json")
-	t.Setenv("QUOTA_REQUESTS_PER_DAY", "250")
+	t.Setenv("QUOTA_TOKENS_PER_DAY", "250")
 	t.Setenv("ROUTES_FILE", "/etc/gw/routes.json")
 	t.Setenv("PPROF_ADDR", "localhost:6060")
 
@@ -155,7 +155,7 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_PER_SECOND", "0")
 	t.Setenv("RATE_LIMIT_BURST", "-1")
 	t.Setenv("MAX_CONCURRENT_REQUESTS", "abc")
-	t.Setenv("QUOTA_REQUESTS_PER_DAY", "0")
+	t.Setenv("QUOTA_TOKENS_PER_DAY", "0")
 
 	cfg := LoadConfig()
 
@@ -180,7 +180,7 @@ func TestLoadConfigInvalidValuesUseDefaults(t *testing.T) {
 	if cfg.MaxConcurrent != 100 {
 		t.Errorf("MaxConcurrent = %d, want 100", cfg.MaxConcurrent)
 	}
-	if cfg.DailyQuota != 1000 {
-		t.Errorf("DailyQuota = %d, want 1000", cfg.DailyQuota)
+	if cfg.DailyQuota != 100000 {
+		t.Errorf("DailyQuota = %d, want 100000", cfg.DailyQuota)
 	}
 }

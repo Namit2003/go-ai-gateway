@@ -77,8 +77,8 @@ func LoadConfig() Config {
 		apiKeysFile = "keys.json"
 	}
 
-	dailyQuota := 1000
-	if n, err := strconv.Atoi(os.Getenv("QUOTA_REQUESTS_PER_DAY")); err == nil && n > 0 {
+	dailyQuota := 100000
+	if n, err := strconv.Atoi(os.Getenv("QUOTA_TOKENS_PER_DAY")); err == nil && n > 0 {
 		dailyQuota = n
 	}
 
