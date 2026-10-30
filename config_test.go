@@ -22,6 +22,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	t.Setenv("API_KEYS_FILE", "")
 	t.Setenv("QUOTA_REQUESTS_PER_DAY", "")
 	t.Setenv("ROUTES_FILE", "")
+	t.Setenv("PPROF_ADDR", "")
 
 	cfg := LoadConfig()
 
@@ -67,6 +68,9 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.RoutesFile != "routes.json" {
 		t.Errorf("RoutesFile = %q, want routes.json", cfg.RoutesFile)
 	}
+	if cfg.PprofAddr != "" {
+		t.Errorf("PprofAddr = %q, want empty (pprof off)", cfg.PprofAddr)
+	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
@@ -86,6 +90,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("API_KEYS_FILE", "/etc/gw/keys.json")
 	t.Setenv("QUOTA_REQUESTS_PER_DAY", "250")
 	t.Setenv("ROUTES_FILE", "/etc/gw/routes.json")
+	t.Setenv("PPROF_ADDR", "localhost:6060")
 
 	cfg := LoadConfig()
 
@@ -136,6 +141,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.RoutesFile != "/etc/gw/routes.json" {
 		t.Errorf("RoutesFile = %q, want /etc/gw/routes.json", cfg.RoutesFile)
+	}
+	if cfg.PprofAddr != "localhost:6060" {
+		t.Errorf("PprofAddr = %q, want localhost:6060", cfg.PprofAddr)
 	}
 }
 

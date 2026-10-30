@@ -9,6 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -139,6 +140,13 @@ func main() {
 	mux.Handle("GET /metrics", promhttp.Handler())
 
 	mux.Handle("POST /v1/chat/completions", logRequests(requireAPIKey(keys, rateLimit(limiter, limitConcurrency(cfg.MaxConcurrent, quota(NewQuotaTracker(cfg.DailyQuota), chatCompletionsHandler(provider)))))))
+
+	if cfg.PprofAddr != "" {
+		go func() {
+			log.Printf("pprof listening on %s", cfg.PprofAddr)
+			log.Println(http.ListenAndServe(cfg.PprofAddr, nil))
+		}()
+	}
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 

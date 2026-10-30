@@ -23,6 +23,7 @@ type Config struct {
 	APIKeysFile      string
 	DailyQuota       int
 	RoutesFile       string
+	PprofAddr        string
 }
 
 func LoadConfig() Config {
@@ -103,5 +104,6 @@ func LoadConfig() Config {
 		APIKeysFile:      apiKeysFile,
 		DailyQuota:       dailyQuota,
 		RoutesFile:       routesFile,
+		PprofAddr:        os.Getenv("PPROF_ADDR"),
 	}
 }
