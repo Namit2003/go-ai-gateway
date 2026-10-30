@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -257,5 +260,43 @@ func TestOpenAIBreaker(t *testing.T) {
 				t.Errorf("upstream calls = %d, want %d", calls, tt.wantCalls)
 			}
 		})
+	}
+}
+
+func TestUpstreamClientReusesConnections(t *testing.T) {
+	var conns atomic.Int32
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srv.Config.ConnState = func(c net.Conn, s http.ConnState) {
+		if s == http.StateNew {
+			conns.Add(1)
+		}
+	}
+	srv.Start()
+	defer srv.Close()
+	client := newUpstreamClient(time.Second)
+
+	burst := func() {
+		var wg sync.WaitGroup
+		for range 20 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				resp, err := client.Get(srv.URL)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}()
+		}
+		wg.Wait()
+	}
+	burst()
+	before := conns.Load()
+	burst()
+
+	if opened := conns.Load() - before; opened > 5 {
+		t.Errorf("second burst opened %d new connections, want them reused", opened)
 	}
 }

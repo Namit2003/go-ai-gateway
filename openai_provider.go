@@ -21,6 +21,7 @@ var upstreamClient = newUpstreamClient(60 * time.Second)
 func newUpstreamClient(headerTimeout time.Duration) *http.Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.ResponseHeaderTimeout = headerTimeout
+	t.MaxIdleConnsPerHost = 100
 	return &http.Client{Transport: t}
 }
 
