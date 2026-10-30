@@ -51,7 +51,7 @@
 
 - [x] load generator
 - [x] benchmarks
-- [ ] profiling
+- [x] profiling
 - [x] failure injection
 
 ## Phase 8 — Later
