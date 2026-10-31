@@ -35,7 +35,7 @@
 ## Phase 5 — Routing
 
 - [x] configurable routing rules
-- [ ] latency-aware routing
+- [x] latency-aware routing
 - [ ] cost-aware routing
 
 
@@ -57,5 +57,5 @@
 ## Phase 8 — Later
 
 - [ ] native Anthropic provider (/v1/messages)
-- [ ] token-based quota
+- [x] token-based quota
 - [ ] OpenTelemetry

@@ -22,10 +22,11 @@ type When struct {
 }
 
 type Rule struct {
-	Model    string `json:"model"`
-	When     When   `json:"when"`
-	Provider string `json:"provider"`
-	UseModel string `json:"use_model"`
+	Model     string   `json:"model"`
+	When      When     `json:"when"`
+	Provider  string   `json:"provider"`
+	Providers []string `json:"providers"`
+	UseModel  string   `json:"use_model"`
 }
 
 type providerConfig struct {
@@ -158,9 +159,26 @@ func LoadRouter(path string, def Provider, cfg Config) (*Router, error) {
 	}
 
 	for i, rule := range file.Routes {
-		p, ok := providers[rule.Provider]
-		if !ok {
-			return nil, fmt.Errorf("%s: route %d uses unknown provider %q", path, i+1, rule.Provider)
+		var p Provider
+		if len(rule.Providers) > 0 {
+			if rule.Provider != "" {
+				return nil, fmt.Errorf("%s: route %d sets both provider and providers", path, i+1)
+			}
+			subs := make([]Provider, len(rule.Providers))
+			for j, name := range rule.Providers {
+				sub, ok := providers[name]
+				if !ok {
+					return nil, fmt.Errorf("%s: route %d uses unknown provider %q", path, i+1, name)
+				}
+				subs[j] = sub
+			}
+			p = NewLatencyProvider(rule.Providers, subs)
+		} else {
+			var ok bool
+			p, ok = providers[rule.Provider]
+			if !ok {
+				return nil, fmt.Errorf("%s: route %d uses unknown provider %q", path, i+1, rule.Provider)
+			}
 		}
 		if rule.Model == "" {
 			return nil, fmt.Errorf("%s: route %d needs a model", path, i+1)

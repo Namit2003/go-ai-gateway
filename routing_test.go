@@ -190,6 +190,18 @@ func TestLoadRouter(t *testing.T) {
 		}
 	})
 
+	t.Run("providers list becomes a latency provider", func(t *testing.T) {
+		r, err := LoadRouter(write(`{
+			"providers": {"a": {"base_url": "http://a"}, "b": {"base_url": "http://b"}},
+			"routes": [{"model": "x*", "providers": ["a", "b"]}]}`), def, Config{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if l, ok := r.routes[0].provider.(*LatencyProvider); !ok || len(l.providers) != 2 {
+			t.Errorf("provider = %#v, want a latency provider with 2 candidates", r.routes[0].provider)
+		}
+	})
+
 	bad := map[string]string{
 		"invalid JSON":           `nope`,
 		"unknown provider":       `{"routes": [{"model": "x", "provider": "ghost"}]}`,
@@ -197,6 +209,8 @@ func TestLoadRouter(t *testing.T) {
 		"auto without use_model": `{"routes": [{"model": "auto", "provider": "openai"}]}`,
 		"provider without url":   `{"providers": {"local": {}}, "routes": []}`,
 		"unknown default":        `{"default": "ghost", "routes": []}`,
+		"unknown in providers":   `{"providers": {"a": {"base_url": "http://x"}}, "routes": [{"model": "x", "providers": ["a", "ghost"]}]}`,
+		"provider and providers": `{"providers": {"a": {"base_url": "http://x"}}, "routes": [{"model": "x", "provider": "a", "providers": ["a"]}]}`,
 	}
 	for name, content := range bad {
 		t.Run(name, func(t *testing.T) {
