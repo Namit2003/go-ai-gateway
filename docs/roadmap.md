@@ -36,7 +36,7 @@
 
 - [x] configurable routing rules
 - [x] latency-aware routing
-- [ ] cost-aware routing
+- [-] cost-aware routing (not needed: rules and the local model already cover it)
 
 
 
